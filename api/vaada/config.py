@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     fake_gateway_key_secret: str = "fake-key-secret-for-dev-and-demo-only"
     fake_gateway_webhook_secret: str = "fake-webhook-secret-for-dev-and-demo-only"
     fake_gateway_activation_seconds: int = 5
+    fake_gateway_chaos: str = ""
 
     client_fee_bps: int = 242
     gateway_fee_bps: int = 236
