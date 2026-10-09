@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light only">
+<title>{{ message.subject }}</title>
+</head>
+<body style="margin:0;padding:0;background:#F3EDE0;">
+<div style="display:none;max-height:0;overflow:hidden;">{{ message.preview }}</div>
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="background:#F3EDE0;">
+<tr><td align="center" style="padding:24px 12px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="max-width:560px;background:#F3EDE0;">
+<tr><td style="padding:0 4px 10px 4px;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:13px;letter-spacing:0.18em;color:#4A453C;">
+VAADA &middot; &#2357;&#2366;&#2342;&#2366;{% if message.deed_no %} &middot; DEED No. {{ message.deed_no }}{% endif %}
+</td></tr>
+<tr><td style="border-top:1px solid #8B1E1E;font-size:0;line-height:0;height:1px;">&nbsp;</td></tr>
+<tr><td style="padding:22px 4px 6px 4px;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:24px;line-height:1.25;color:#1C1A16;">
+{{ message.heading }}
+</td></tr>
+{% for paragraph in message.paragraphs %}
+<tr><td style="padding:10px 4px 0 4px;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:17px;line-height:1.55;color:#1C1A16;">
+{{ paragraph }}
+</td></tr>
+{% endfor %}
+{% if message.rows %}
+<tr><td style="padding:18px 4px 0 4px;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="border-top:1px solid #9A7B2F;border-bottom:1px solid #9A7B2F;">
+{% for row in message.rows %}
+<tr>
+<td style="padding:9px 0;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:16px;color:{% if row.emphasis %}#1C1A16{% else %}#4A453C{% endif %};{% if row.emphasis %}font-weight:bold;{% endif %}">{{ row.label }}</td>
+<td align="right" style="padding:9px 0;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:16px;color:#1C1A16;white-space:nowrap;{% if row.emphasis %}font-weight:bold;{% endif %}">{{ row.value }}</td>
+</tr>
+{% endfor %}
+</table>
+</td></tr>
+{% endif %}
+{% if message.action %}
+<tr><td style="padding:24px 4px 0 4px;">
+<a href="{{ message.action.url }}" style="display:inline-block;padding:12px 20px;border:1px solid #1C1A16;color:#1C1A16;text-decoration:none;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:16px;">{{ message.action.label }}</a>
+</td></tr>
+<tr><td style="padding:10px 4px 0 4px;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:13px;line-height:1.5;color:#4A453C;word-break:break-all;">
+Or open {{ message.action.url }}
+</td></tr>
+{% endif %}
+<tr><td style="padding:28px 4px 0 4px;font-family:Georgia,'Source Serif 4','Times New Roman',serif;font-size:13px;line-height:1.5;color:#4A453C;">
+Vaada helps people write down what they agreed. It is not a lawyer, and a Vaada deed is not stamped under the Indian Stamp Act. Money on Vaada is held by Razorpay, not by us.
+</td></tr>
+</table>
+</td></tr>
+</table>
+</body>
+</html>

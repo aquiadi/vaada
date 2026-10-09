@@ -1,0 +1,103 @@
+[
+  {
+    "name": "empty object",
+    "document": {},
+    "canonical": "{}",
+    "hash": "0xb48d38f93eaa084033fc5970bf96e559c33c4cdc07d889ab00b4d63f9590739d"
+  },
+  {
+    "name": "unicode and escapes",
+    "document": {
+      "name": "राहुल मेहता",
+      "quote": "He said \"done\"\n",
+      "tab": "a\tb",
+      "slash": "a/b\\c",
+      "ctrl": "\u0001",
+      "emoji_free": "₹25,000"
+    },
+    "canonical": "{\"ctrl\":\"\\u0001\",\"emoji_free\":\"₹25,000\",\"name\":\"राहुल मेहता\",\"quote\":\"He said \\\"done\\\"\\n\",\"slash\":\"a/b\\\\c\",\"tab\":\"a\\tb\"}",
+    "hash": "0x99bf11a3582271f6163cb30bb3b59f893f35f13ba6d18e29474dae139d62debb"
+  },
+  {
+    "name": "nested and sorted",
+    "document": {
+      "z": [
+        3,
+        {
+          "b": null,
+          "a": true
+        }
+      ],
+      "a": {
+        "y": "2",
+        "x": "1"
+      },
+      "m": false
+    },
+    "canonical": "{\"a\":{\"x\":\"1\",\"y\":\"2\"},\"m\":false,\"z\":[3,{\"a\":true,\"b\":null}]}",
+    "hash": "0x67d0e26807d4f3b3a44864c509a2828ba4c5cdbf04f8cac5c326bdbb1885c0a1"
+  },
+  {
+    "name": "agreement",
+    "document": {
+      "v": 1,
+      "deed_no": 42,
+      "nonce": "0xabababababababababababababababab",
+      "published_at": "2026-10-09T06:30:00Z",
+      "currency": "INR",
+      "maker": {
+        "name": "Aditi Rao",
+        "maker_id": "0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd"
+      },
+      "client": {
+        "name": "Rahul Mehta",
+        "organisation": "Kiln Labs"
+      },
+      "work": {
+        "description": "a logo, three revisions, and brand guidelines",
+        "revisions": 3
+      },
+      "money": {
+        "total_paise": "2500000",
+        "client_fee_paise": "60500",
+        "platform_fee_paise": "0"
+      },
+      "milestones": [
+        {
+          "idx": 1,
+          "title": "Advance",
+          "deliverables": "Kick-off and two concepts",
+          "amount_paise": "1250000",
+          "due_at": "2026-10-17T18:29:59Z"
+        },
+        {
+          "idx": 2,
+          "title": "On delivery",
+          "deliverables": "Final files: SVG, PNG, guidelines PDF",
+          "amount_paise": "1250000",
+          "due_at": "2026-10-30T18:29:59Z"
+        }
+      ],
+      "clauses": {
+        "late_fee": null,
+        "kill_fee": {
+          "percent": 25
+        },
+        "ip_transfer": {
+          "exclusions": "drafts and unused concepts"
+        }
+      },
+      "policy": {
+        "review_window_days": 5,
+        "hold_buffer_hours": 24,
+        "grace_days": 3,
+        "accept_pay_days": 7,
+        "max_deal_days": 120,
+        "client_fee_bps": 242,
+        "platform_fee_bps": 0
+      }
+    },
+    "canonical": "{\"clauses\":{\"ip_transfer\":{\"exclusions\":\"drafts and unused concepts\"},\"kill_fee\":{\"percent\":25},\"late_fee\":null},\"client\":{\"name\":\"Rahul Mehta\",\"organisation\":\"Kiln Labs\"},\"currency\":\"INR\",\"deed_no\":42,\"maker\":{\"maker_id\":\"0xcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd\",\"name\":\"Aditi Rao\"},\"milestones\":[{\"amount_paise\":\"1250000\",\"deliverables\":\"Kick-off and two concepts\",\"due_at\":\"2026-10-17T18:29:59Z\",\"idx\":1,\"title\":\"Advance\"},{\"amount_paise\":\"1250000\",\"deliverables\":\"Final files: SVG, PNG, guidelines PDF\",\"due_at\":\"2026-10-30T18:29:59Z\",\"idx\":2,\"title\":\"On delivery\"}],\"money\":{\"client_fee_paise\":\"60500\",\"platform_fee_paise\":\"0\",\"total_paise\":\"2500000\"},\"nonce\":\"0xabababababababababababababababab\",\"policy\":{\"accept_pay_days\":7,\"client_fee_bps\":242,\"grace_days\":3,\"hold_buffer_hours\":24,\"max_deal_days\":120,\"platform_fee_bps\":0,\"review_window_days\":5},\"published_at\":\"2026-10-09T06:30:00Z\",\"v\":1,\"work\":{\"description\":\"a logo, three revisions, and brand guidelines\",\"revisions\":3}}",
+    "hash": "0x43f426e4eee5c1f9dd9a06560a5aa87c7c9441d5f77bcf6b665c630f1ba21d41"
+  }
+]
