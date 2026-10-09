@@ -1,0 +1,39 @@
+name: vaada
+
+services:
+  redis:
+    image: redis:7.4-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:v1.5.1
+    entrypoint: ["anvil"]
+    command: ["--host", "0.0.0.0", "--port", "8545", "--chain-id", "31337", "--state", "/state/anvil.json"]
+    ports:
+      - "127.0.0.1:8545:8545"
+    volumes:
+      - anvil-state:/state
+    healthcheck:
+      test: ["CMD", "cast", "block-number", "--rpc-url", "http://127.0.0.1:8545"]
+      interval: 2s
+      timeout: 2s
+      retries: 30
+
+  # `docker compose run --rm forge ...` deploys the registry when Foundry isn't installed locally.
+  forge:
+    image: ghcr.io/foundry-rs/foundry:v1.5.1
+    profiles: ["tools"]
+    working_dir: /contracts
+    entrypoint: ["forge"]
+    network_mode: host
+    volumes:
+      - ./contracts:/contracts
+
+volumes:
+  anvil-state:

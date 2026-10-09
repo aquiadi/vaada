@@ -42,6 +42,8 @@ def configure_logging(settings: Settings) -> None:
     root.setLevel(settings.log_level.upper())
     for noisy in ("httpx", "web3", "urllib3", "asyncio"):
         logging.getLogger(noisy).setLevel(logging.WARNING)
+    # arq installs its own handler when started from its CLI; one copy of each line is enough.
+    logging.getLogger("arq").propagate = False
 
 
 def _before_send(event: Any, _hint: Any) -> Any:
