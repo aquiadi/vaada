@@ -41,17 +41,17 @@ export function formatDeedDate(iso: string): string {
 const istFormat = new Intl.DateTimeFormat("en-IN", {
   timeZone: "Asia/Kolkata",
   day: "numeric",
-  month: "short",
+  month: "numeric",
   year: "numeric",
   hour: "2-digit",
   minute: "2-digit",
   hour12: false,
 });
 
-/** "12 Oct 2026, 14:03 IST" for an instant. */
+/** "12 Oct 2026, 14:03 IST" for an instant. Month names come from our list: en-IN writes September as "Sept". */
 export function formatInstantIst(isoInstant: string): string {
   const parts = Object.fromEntries(istFormat.formatToParts(new Date(isoInstant)).map((p) => [p.type, p.value]));
-  return `${parts.day} ${parts.month} ${parts.year}, ${parts.hour}:${parts.minute} IST`;
+  return `${parts.day} ${MONTHS[Number(parts.month) - 1]} ${parts.year}, ${parts.hour}:${parts.minute} IST`;
 }
 
 const istDateOnly = new Intl.DateTimeFormat("en-CA", {

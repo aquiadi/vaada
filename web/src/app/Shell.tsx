@@ -229,7 +229,7 @@ export function Shell() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
   return (
-    <div className="flex min-h-dvh flex-col">
+    <div className={`flex min-h-dvh flex-col ${config?.persona_switcher ? "pb-14" : ""}`}>
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:bg-paper focus:p-2">
         Skip to the page
       </a>

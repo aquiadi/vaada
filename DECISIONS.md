@@ -22,3 +22,6 @@ One line each. Newest at the bottom.
 - Marginalia controls (strike toggles, "heard" corrections) stay out of the Tab order so Tab walks only blanks and a dictation never lands on a button; the strike toggles are repeated at the foot of the deed in the Tab order, so the keyboard path is complete.
 - Autosave runs saves one after another, each carrying the version the last returned; Send saves anything outstanding first, because publishing freezes what the server holds.
 - A struck clause gets one pen stroke per line of its words, measured from the rendered text, so the stroke ends where the words end.
+- The API refuses a DATABASE_URL on the transaction pooler (port 6543): the per-deal lock is a session advisory lock held across commits, which a transaction pooler would strand on another backend.
+- Demo must keep email in the outbox: it is public, and anyone could type a real stranger's address as the client.
+- The demo's Railway service seeds on every deploy (a no-op once seeded), so a fresh demo database comes up with the personas and four deeds.

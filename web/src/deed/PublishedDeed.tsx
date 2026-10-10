@@ -95,7 +95,7 @@ export function factsFromAgreement(a: Agreement): DeedFacts {
 function VerifyHash({ agreement, hash }: { agreement: Agreement; hash: string }) {
   const [result, setResult] = useState<"match" | "mismatch" | null>(null);
   return (
-    <span>
+    <span className="no-print">
       <button
         type="button"
         onClick={() => setResult(agreementHash(agreement) === hash ? "match" : "mismatch")}
@@ -125,7 +125,7 @@ export function RegistryLink({ entry }: { entry: RegistryEntry | undefined }) {
     );
   return (
     <span className="text-micro text-ink-soft">
-      Recorded on the local chain <Mono>{entry.tx_hash?.slice(0, 10)}…</Mono>
+      Recorded on the local chain <span className="whitespace-nowrap font-mono">{entry.tx_hash?.slice(0, 10)}…</span>
     </span>
   );
 }
