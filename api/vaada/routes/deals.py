@@ -120,7 +120,7 @@ async def list_deals(ctx: Ctx, user: CurrentUser) -> dict[str, Any]:
 
 @router.post("/deals", status_code=201)
 async def create_draft(ctx: Ctx, user: CurrentUser) -> dict[str, Any]:
-    deal = await deals.create_draft(ctx, user)
+    deal = await deals.blank_draft(ctx, user)
     return await _room(ctx, deal.id, user)
 
 

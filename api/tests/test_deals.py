@@ -170,3 +170,14 @@ async def test_draft_autosave_rejects_a_stale_version(ctx: AppContext) -> None:
         await deals.update_draft(ctx, deal.id, maker, Draft(), version=deal.draft_version)
     assert raised.value.code == "version_conflict"
     assert updated.draft_version == deal.draft_version + 1
+
+
+async def test_opening_a_new_deed_reuses_one_never_written_in(ctx: AppContext) -> None:
+    maker = await make_user(ctx, "Aditi Rao")
+    first = await deals.blank_draft(ctx, maker)
+    assert (await deals.blank_draft(ctx, maker)).id == first.id
+    await deals.update_draft(ctx, first.id, maker, Draft.model_validate(first.draft), first.draft_version)
+    second = await deals.blank_draft(ctx, maker)
+    assert second.id != first.id
+    filled = await deals.create_draft(ctx, maker, draft_for(ctx, [Part(2_500_000, 10)]))
+    assert (await deals.blank_draft(ctx, maker)).id == second.id != filled.id

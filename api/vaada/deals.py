@@ -83,6 +83,22 @@ async def create_draft(ctx: AppContext, maker: User, draft: Draft | None = None)
         return deal
 
 
+async def blank_draft(ctx: AppContext, maker: User) -> Deal:
+    """Opening a new deed hands back one the maker opened and never wrote in, rather than piling up empty drafts."""
+    async with ctx.sessions() as session:
+        never_saved = (
+            await session.execute(
+                select(Deal)
+                .where(Deal.freelancer_id == maker.id, Deal.status == DealStatus.DRAFT, Deal.draft_version == 1)
+                .order_by(Deal.created_at.desc())
+                .limit(5)
+            )
+        ).scalars()
+        # A re-issued deed is also never saved, but it starts filled in; only an empty one is spare.
+        unused = next((d for d in never_saved if set((d.draft or {}).get("blanks", {})) <= {"maker_name"}), None)
+    return unused or await create_draft(ctx, maker)
+
+
 async def update_draft(ctx: AppContext, deal_id: uuid.UUID, maker: User, draft: Draft, version: int) -> Deal:
     async with transaction(ctx.sessions) as session:
         deal = await load_deal(session, deal_id, lock=True)
