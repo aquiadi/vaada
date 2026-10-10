@@ -2,7 +2,7 @@ SHELL := /bin/bash
 .DEFAULT_GOAL := help
 .PHONY: help dev check deps infra signing-key contracts env migrate seed run stop reset test test-api test-web test-contracts lint e2e screens
 
-SUPABASE := npx --yes supabase@2.120.0
+SUPABASE ?= npx --yes supabase@2.120.0
 API_ENV := VAADA_ENV_FILE=../.dev/api.env
 
 help: ## List the targets
@@ -18,9 +18,11 @@ deps: ## Install Python and Node dependencies and the contract libraries
 	cd api && uv sync
 	cd web && pnpm install --frozen-lockfile
 
+# Generated in an empty workdir: inside this project the CLI first tries to read the keys file it is about to create.
 signing-key:
 	@test -s supabase/signing_keys.json || { \
-		key=$$($(SUPABASE) gen signing-key --algorithm ES256 2>/dev/null | head -n 1); \
+		key=$$($(SUPABASE) gen signing-key --algorithm ES256 --workdir "$$(mktemp -d)" 2>/dev/null | head -n 1); \
+		case "$$key" in '{"kty"'*) ;; *) echo "could not generate a Supabase signing key: $$key" >&2; exit 1;; esac; \
 		echo "[$$key]" > supabase/signing_keys.json; echo "generated supabase/signing_keys.json"; }
 
 infra: signing-key ## Start Redis, Anvil and local Supabase
