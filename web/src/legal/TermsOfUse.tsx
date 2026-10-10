@@ -32,7 +32,7 @@ export function TermsOfUse() {
               confirm that you may agree to these terms on its behalf.
             </>,
             <>
-              You sign in with a one-time code sent to your email. Keep that email to yourself: whatever is done after a correct code
+              You sign in with a one-time code sent to your email. Keep that inbox to yourself: whatever is done after a correct code
               is treated as done by you.
             </>,
             <>Give true details, above all your name on a deed and, as a maker, your tax and bank details to Razorpay.</>,

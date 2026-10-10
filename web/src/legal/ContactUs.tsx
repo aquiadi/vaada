@@ -2,25 +2,10 @@ import type { ReactNode } from "react";
 import { useConfig, type AppConfig } from "../lib/config";
 import { Clause, Placeholder, PolicySheet } from "./PolicySheet";
 
-interface ContactDetails {
-  address: string;
-  phone: string;
-  email: string;
-}
-
-function textAt(source: unknown, key: string): string {
-  if (typeof source !== "object" || source === null) return "";
-  const value: unknown = (source as Record<string, unknown>)[key];
-  return typeof value === "string" ? value.trim() : "";
-}
-
-/**
- * The API publishes the owner's contact details in /config once they are set. AppConfig doesn't declare them,
- * so they are read defensively and an empty value keeps its placeholder.
- */
-function publishedContact(config: AppConfig | undefined): ContactDetails {
-  const contact: unknown = config && "contact" in config ? config.contact : null;
-  return { address: textAt(contact, "address"), phone: textAt(contact, "phone"), email: textAt(contact, "email") };
+/** The owner's details from /config; an empty one keeps its placeholder. */
+function publishedContact(config: AppConfig | undefined): AppConfig["contact"] {
+  const contact = config?.contact;
+  return { address: contact?.address.trim() ?? "", phone: contact?.phone.trim() ?? "", email: contact?.email.trim() ?? "" };
 }
 
 function Entry({ label, children }: { label: string; children: ReactNode }) {

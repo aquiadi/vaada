@@ -9,6 +9,9 @@ export interface AppConfig {
   google_signin_enabled: boolean;
   persona_switcher: boolean;
   dev_tools: boolean;
+  new_deals_paused: boolean;
+  /** The owner's published contact details; each is empty until set. */
+  contact: { address: string; phone: string; email: string };
   gateway: "fake" | "razorpay";
   chain_id: number;
   registry_address: string | null;

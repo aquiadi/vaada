@@ -86,7 +86,10 @@ export function YourData() {
         />
       </div>
       {downloadError ? <Notice tone="error">{downloadError}</Notice> : null}
-      <p className="text-note text-ink-soft">The download is a JSON file: your profile, deeds, acceptances, ledger, register and dictations.</p>
+      <p className="text-note text-ink-soft">
+        The download is a JSON file: your profile, payout details, deeds and their parts, acceptances, ledger, register, dictations,
+        updates, disputes and cancellations.
+      </p>
     </div>
   );
 }

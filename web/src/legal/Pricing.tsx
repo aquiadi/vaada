@@ -89,7 +89,14 @@ export function Pricing() {
               caption="What the client pays"
               lines={[
                 { label: "Deal total", paise: EXAMPLE_TOTAL_PAISE },
-                { label: <>Processing fee, {percentFromBps(n.clientFeeBps)}</>, paise: fee },
+                {
+                  label: (
+                    <>
+                      Processing fee, <span className="figures">{percentFromBps(n.clientFeeBps)}</span>
+                    </>
+                  ),
+                  paise: fee,
+                },
               ]}
               total={{ label: "Client pays", paise: clientPays }}
             />
