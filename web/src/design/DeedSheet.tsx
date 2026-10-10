@@ -3,6 +3,8 @@ import { frameGeometry, ringPaths } from "./guilloche";
 
 interface Props {
   deedNo?: number | null;
+  /** What the panel's second line says; a deed's number unless this sheet is something else, like a certificate. */
+  title?: string;
   children: ReactNode;
   compact?: boolean;
   className?: string;
@@ -31,7 +33,7 @@ export function deedNumber(deedNo: number | null | undefined): string {
  * A sheet of deed paper: grain, an engraved guilloche border in stamp green and a small panel at the head
  * that carries Vaada's own mark and the deed number. Nothing on it imitates government stamp paper.
  */
-export function DeedSheet({ deedNo, children, compact = false, className = "" }: Props) {
+export function DeedSheet({ deedNo, title, children, compact = false, className = "" }: Props) {
   const [ref, { w, h }] = useSize<HTMLDivElement>();
   const narrow = compact || w < 560;
   const band = narrow ? 11 : 18;
@@ -92,7 +94,7 @@ export function DeedSheet({ deedNo, children, compact = false, className = "" }:
             Vaada · <span className="deva normal-case tracking-normal">वादा</span>
           </span>
           <span className="figures font-display text-ink" style={{ fontSize: narrow ? 15 : 19, letterSpacing: "0.08em" }}>
-            DEED No. {deedNumber(deedNo)}
+            {title ?? `DEED No. ${deedNumber(deedNo)}`}
           </span>
         </div>
       )}

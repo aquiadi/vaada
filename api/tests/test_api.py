@@ -158,6 +158,7 @@ async def test_the_whole_flow_over_http(ctx: AppContext) -> None:
         assert ledger["balances"] == {"held_paise": 1_250_000, "received_paise": 1_250_000}
         csv_text = (await client.get("/ledger.csv", headers=maker)).text
         assert "12500.00" in csv_text and "Released for settlement" in csv_text
+        assert csv_text.startswith("Date (IST),") and " IST" not in csv_text.splitlines()[1]
 
         stranger = auth(ctx, await make_user(ctx, "Someone Else"))
         assert (await client.get(f"/deals/{room['id']}", headers=stranger)).status_code == 404

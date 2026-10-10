@@ -77,5 +77,6 @@ export async function download(path: string, filename: string): Promise<void> {
   link.href = url;
   link.download = filename;
   link.click();
-  URL.revokeObjectURL(url);
+  // Revoking at once can cancel the download in some browsers; a minute later the file is long saved.
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

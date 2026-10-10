@@ -48,9 +48,9 @@ export function Mono({ children, className = "" }: { children: ReactNode; classN
   return <span className={`font-mono text-[0.8125rem] tracking-tight break-all ${className}`}>{children}</span>;
 }
 
-/** Something to say: an error in bahi red with a rule, or a plain note. */
+/** Something to say, beside a rule: bahi red marks an error, stamp green a success, gold a plain note. Text stays ink. */
 export function Notice({ tone = "note", children, className = "" }: { tone?: "error" | "note" | "ok"; children: ReactNode; className?: string }) {
-  const color = tone === "error" ? "border-bahi text-bahi" : tone === "ok" ? "border-stamp text-ink" : "border-gold text-ink-soft";
+  const color = tone === "error" ? "border-bahi text-ink" : tone === "ok" ? "border-stamp text-ink" : "border-gold text-ink-soft";
   return (
     <div role={tone === "error" ? "alert" : "status"} className={`border-l-2 py-1 pl-3 text-note ${color} ${className}`}>
       {children}
@@ -78,7 +78,7 @@ export const Field = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
           className={`w-full rounded-none border-0 border-b bg-transparent px-0 py-1.5 font-serif text-body text-ink outline-none transition-colors duration-150 placeholder:text-ink-soft/70 focus:border-bahi focus-visible:outline-none ${error ? "border-bahi" : "border-[color-mix(in_srgb,var(--ink)_35%,transparent)]"}`}
         />
         {error ? (
-          <p id={`${inputId}-error`} className="m-0 text-note text-bahi">
+          <p id={`${inputId}-error`} className="m-0 border-l-2 border-bahi pl-2 text-note text-ink">
             {error}
           </p>
         ) : hint ? (

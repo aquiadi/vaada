@@ -38,6 +38,11 @@ def ist_moment(moment: datetime) -> str:
     return f"{local.day} {MONTHS[local.month - 1]} {local.year}, {local:%H:%M} IST"
 
 
+def ist_timestamp(moment: datetime) -> str:
+    """2026-10-12 14:03, in IST: sorts as text and reads in a spreadsheet."""
+    return f"{_ist(moment):%Y-%m-%d %H:%M}"
+
+
 def ist_day(moment: datetime) -> str:
     """Sat 17 Oct 2026"""
     local = _ist(moment)

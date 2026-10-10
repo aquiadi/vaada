@@ -2,12 +2,13 @@
 
 import csv
 import io
+from datetime import datetime
 from typing import Any, Literal
 
 from sqlalchemy import select
 
 from vaada.context import AppContext
-from vaada.format import deed_number
+from vaada.format import deed_number, ist_timestamp
 from vaada.models import Deal, LedgerEntry, Milestone, User
 from vaada.models.enums import DealStatus, LedgerKind
 
@@ -99,7 +100,7 @@ def as_csv(rows: list[dict[str, Any]]) -> str:
     writer = csv.writer(buffer)
     writer.writerow(
         [
-            "Date (UTC)",
+            "Date (IST)",
             "Deed No.",
             "Client",
             "Milestone",
@@ -112,7 +113,7 @@ def as_csv(rows: list[dict[str, Any]]) -> str:
     for r in rows:
         writer.writerow(
             [
-                r["at"][:19].replace("T", " "),
+                ist_timestamp(datetime.fromisoformat(r["at"])),
                 deed_number(r["deed_no"]),
                 r["client"],
                 f"{r['milestone_idx']}. {r['milestone_title']}" if r["milestone_idx"] else "",

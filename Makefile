@@ -75,7 +75,7 @@ lint: ## Lint everything
 	cd contracts && forge fmt --check
 
 e2e: ## Playwright end-to-end test of the whole dev flow (needs make dev running)
-	cd web && pnpm e2e
+	cd web && pnpm exec playwright install chromium && pnpm e2e
 
 screens: ## Screenshots of every route at 1440 and 390 in both themes, into docs/screens
-	cd web && pnpm screens
+	cd web && pnpm exec playwright install chromium && pnpm screens
