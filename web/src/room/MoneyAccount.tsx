@@ -40,11 +40,13 @@ export function MoneyAccount({ room }: { room: Room }) {
         <caption className="sr-only">What this deed costs, what was paid, and where the deal total stands now</caption>
         <tbody>
           <Row label="Deal total" note="For the work, as written in the deed." paise={room.money.total_paise ?? 0} />
-          <Row
-            label="Processing fee"
-            note={`Paid by ${payer} on top of the deal total. It covers Razorpay’s charges and isn’t refunded.`}
-            paise={room.money.client_fee_paise}
-          />
+          {room.money.client_fee_paise > 0 ? (
+            <Row
+              label="Processing fee"
+              note={`Paid by ${payer} on top of the deal total. It covers Razorpay’s charges and isn’t refunded.`}
+              paise={room.money.client_fee_paise}
+            />
+          ) : null}
           {room.money.platform_fee_paise > 0 ? (
             <Row label="Vaada’s fee" note="Taken from the Maker’s share as each part is released." paise={room.money.platform_fee_paise} />
           ) : null}

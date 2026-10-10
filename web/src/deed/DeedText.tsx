@@ -41,6 +41,8 @@ export function Para({ children, margin, dropCap = false, id }: { children: Reac
 
 function feeSentence(facts: DeedFacts): string {
   if (facts.clientFeePaise === null) return "together with a processing fee that covers the payment gateway's charges";
+  // With Razorpay's customer-fee model Vaada charges nothing on top, and Razorpay shows its own charge at checkout.
+  if (facts.clientFeePaise === 0) return "together with any charge Razorpay adds at checkout";
   return `together with a processing fee of ${formatRupees(facts.clientFeePaise)} that covers the payment gateway's charges`;
 }
 

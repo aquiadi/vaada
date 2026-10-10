@@ -117,7 +117,8 @@ def milestone_actions(
                 "action": "refund",
                 "label": "Ask for this money back",
                 "effect": f"Milestone {roman(m.idx)} wasn't delivered within {s.grace_days} days of its due date. This "
-                f"asks Razorpay to return {amount} to you. The processing fee isn't refunded.",
+                f"asks Razorpay to return {amount} to you."
+                + (" The processing fee isn't refunded." if deal.client_fee_paise else ""),
             }
         )
     if role == Role.CLIENT and m.status == MilestoneStatus.REFUND_REQUESTED:
@@ -292,8 +293,8 @@ async def deal_room(ctx: AppContext, deal: Deal, viewer: User) -> dict[str, Any]
             {
                 "action": "pay",
                 "label": "Pay now",
-                "effect": f"You pay {rupees((deal.total_paise or 0) + deal.client_fee_paise)}, "
-                "including the non-refundable processing fee.",
+                "effect": f"You pay {rupees((deal.total_paise or 0) + deal.client_fee_paise)}"
+                + (", including the non-refundable processing fee." if deal.client_fee_paise else "."),
             }
         )
 

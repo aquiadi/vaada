@@ -55,10 +55,16 @@ class DealFacts:
     client: str
     room_url: str
     deed_url: str
+    client_fee_paise: int = 0
 
     @property
     def no(self) -> str:
         return deed_number(self.deed_no)
+
+    @property
+    def fee_not_refunded(self) -> str:
+        """Said only when there was a processing fee; with Razorpay's customer-fee model there is none from Vaada."""
+        return " The processing fee is not refunded." if self.client_fee_paise else ""
 
 
 @dataclass(frozen=True)
@@ -89,7 +95,7 @@ def deed_sent(d: DealFacts, *, total_paise: int, client_fee_paise: int, first_du
         ],
         rows=[
             Row("Deal total", rupees(total_paise)),
-            Row("Processing fee (not refundable)", rupees(client_fee_paise)),
+            *([Row("Processing fee (not refundable)", rupees(client_fee_paise))] if client_fee_paise else []),
             Row("You pay", rupees(total_paise + client_fee_paise), emphasis=True),
         ],
         action=Action("Read the deed", d.deed_url),
@@ -119,8 +125,7 @@ def deal_funded(d: DealFacts, *, role: str, total_paise: int, first_due: datetim
     else:
         paragraphs = [
             f"Your payment went through. {rupees(total_paise)} is held by Razorpay and goes to {d.maker} "
-            "one milestone at a time, as you approve the work or five days after each delivery.",
-            "The processing fee you paid on top of the total is not refundable.",
+            "one milestone at a time, as you approve the work or five days after each delivery." + d.fee_not_refunded,
         ]
     return Message(
         subject=f"The money for Deed No. {d.no} is held",
@@ -185,8 +190,8 @@ def milestone_refunded(d: DealFacts, m: MilestoneFacts, *, refund_paise: int, wh
         deed_no=d.no,
         paragraphs=[
             f"This is for {m.label}. {why}",
-            "Refunds reach the card, bank account or UPI app that paid, usually within five to seven working days. "
-            "The processing fee is not refunded.",
+            "Refunds reach the card, bank account or UPI app that paid, usually within five to seven working days."
+            + d.fee_not_refunded,
         ],
         action=Action("Open the deal room", d.room_url),
     )

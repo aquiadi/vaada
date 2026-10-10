@@ -31,15 +31,17 @@ export function FeeBreakdown({ fees, maker, graceDays }: Props) {
               <Rupees paise={fees.total_paise} />
             </td>
           </tr>
-          <tr>
-            <th scope="row" className="py-2 pr-4 text-left align-top font-normal text-ink">
-              Processing fee
-              <span className="block text-note text-ink-soft">Covers Razorpay’s charges. Not refundable.</span>
-            </th>
-            <td className="py-2 text-right align-top">
-              <Rupees paise={fees.client_fee_paise} />
-            </td>
-          </tr>
+          {fees.client_fee_paise > 0 ? (
+            <tr>
+              <th scope="row" className="py-2 pr-4 text-left align-top font-normal text-ink">
+                Processing fee
+                <span className="block text-note text-ink-soft">Covers Razorpay’s charges. Not refundable.</span>
+              </th>
+              <td className="py-2 text-right align-top">
+                <Rupees paise={fees.client_fee_paise} />
+              </td>
+            </tr>
+          ) : null}
         </tbody>
         <tfoot>
           <tr className="border-b-[3px] border-t border-double border-ink">
@@ -53,6 +55,9 @@ export function FeeBreakdown({ fees, maker, graceDays }: Props) {
         </tfoot>
       </table>
       <p className="m-0 mt-2 text-note italic text-ink-soft">{rupeesInWords(fees.order_paise)}</p>
+      {fees.client_fee_paise > 0 ? null : (
+        <p className="m-0 mt-2 text-note text-ink">Razorpay may add its own charge when you pay; it isn’t refunded.</p>
+      )}
       {fees.upi_allowed ? null : (
         <p className="m-0 mt-3 text-note text-ink">
           UPI isn’t offered for this payment, because UPI caps most payments at {upiLimit ? formatRupees(upiLimit) : "a lakh of rupees"}. Netbanking
