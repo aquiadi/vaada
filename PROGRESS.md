@@ -19,14 +19,17 @@
 - Deploy config: one API image, Railway configs for API, worker and the demo (which seeds), Vercel config, env templates for demo, staging and production. Image steps and demo boot verified natively.
 - RazorpayGateway request tests (offline) and an opt-in suite against Razorpay test mode (`make test-razorpay`). Strict mypy is clean and part of `make lint`.
 - README.md and GO_LIVE.md.
+- Voice updates: rule-based interpreter (56 table tests) and the "What happened today?" blank; applying is locked, checked up front and safe to retry.
+- Books: ledger (bahi-khata, CSV in IST), deeds index, maker certificate (/m/:handle), admin queue with dispute decisions.
+- Playwright: `e2e/flow.spec.ts` (the whole dev flow) and `e2e/screens.spec.ts` (every route, two widths, two themes).
 - Deed editor at /new: blanks filled by keyboard or Wispr bursts with live normalising and marginalia, payment plan writing the parts, manual parts when the plan can't be read, strikable clauses, autosave, send with problems mapped back to the margin, WhatsApp share. Checked at 1440 and 390 in both themes.
 
 ## Next
 
-- Web, being built: voice updates, books (ledger, deeds, maker page, admin), front pages (home, login, payouts, outbox), legal pages and pricing.
-- Then: contact page reads `/config.contact`; deed and fee lines handle a zero processing fee (customer-fee model); a review pass over every screen.
-- Playwright e2e and screenshot passes.
+- Being built now: front pages (home, login, payouts, outbox, not found) and legal pages with pricing.
+- Then: the contact page reads `/config.contact`; a six-lens review (hard rules, design, accessibility, web/API contract, code style, logic) and fixes; screenshots of every route at 1440 and 390 in both themes, two honest passes, final shots in docs/screens (`make screens`).
+- Before the final screenshots, reset the dev database (`make reset`, then `make dev`): it holds drafts and deals made while building.
 
 ## Broken
 
-- Nothing known.
+- Nothing known. The e2e test (`make e2e`) passes: sign-up by emailed code, payouts, three deeds dictated by keyboard bursts, accept and pay as a persona, deliver and approve, auto-release after the review window, and a mutual cancellation with the undelivered part refunded.
