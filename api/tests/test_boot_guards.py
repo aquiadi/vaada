@@ -55,3 +55,17 @@ def test_production_needs_the_registry_and_resend(db_url: str) -> None:
         check_boot_guards(make_settings(db_url, vaada_env="production", **{**LIVE, "registry_address": ""}))
     with pytest.raises(BootGuardError, match="Resend"):
         check_boot_guards(make_settings(db_url, vaada_env="production", **{**LIVE, "email_transport": "outbox"}))
+
+
+def test_transaction_pooler_is_refused_because_deal_locks_span_commits(db_url: str) -> None:
+    pooled = "postgresql://postgres.abc:pw@aws-0-ap-south-1.pooler.supabase.com:6543/postgres"
+    with pytest.raises(BootGuardError, match="transaction pooler"):
+        check_boot_guards(make_settings(pooled, vaada_env="production", **LIVE))
+    session = pooled.replace(":6543/", ":5432/")
+    check_boot_guards(make_settings(session, vaada_env="production", **LIVE))
+
+
+def test_demo_never_sends_real_email(db_url: str) -> None:
+    with pytest.raises(BootGuardError, match="outbox"):
+        check_boot_guards(make_settings(db_url, vaada_env="demo", email_transport="resend", resend_api_key="re_123"))
+    check_boot_guards(make_settings(db_url, vaada_env="demo", email_transport="outbox"))

@@ -1,0 +1,8 @@
+# The worker service: same image, runs the arq queue and its schedules (hold checks, reconciliation, email, registry).
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "arq vaada.jobs.worker.WorkerSettings"
+restartPolicyType = "ALWAYS"

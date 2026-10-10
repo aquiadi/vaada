@@ -1,0 +1,12 @@
+# The API service. Migrations run before each deploy goes live, so a release never serves an old schema.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+preDeployCommand = ["alembic upgrade head"]
+startCommand = "sh -c \"uvicorn vaada.main:app_factory --factory --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips '*'\""
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

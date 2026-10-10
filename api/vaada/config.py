@@ -2,6 +2,7 @@ import os
 from enum import StrEnum
 from functools import lru_cache
 from typing import Literal
+from urllib.parse import urlsplit
 
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -15,6 +16,7 @@ class Env(StrEnum):
 
 
 SANDBOX_ENVS = frozenset({Env.DEV, Env.DEMO})
+TRANSACTION_POOLER_PORT = 6543
 
 
 class BootGuardError(RuntimeError):
@@ -133,8 +135,15 @@ def check_boot_guards(settings: Settings) -> None:
         problems.append("WEB_ORIGIN must name the web app's origin")
     if not settings.is_sandbox and not settings.registry_enabled:
         problems.append("CHAIN_RPC_URL, REGISTRY_ADDRESS and RECORDER_PRIVATE_KEY are required outside dev and demo")
+    if urlsplit(settings.database_url).port == TRANSACTION_POOLER_PORT:
+        problems.append(
+            "DATABASE_URL uses a transaction pooler (port 6543); money operations hold a lock across commits on one "
+            "connection, so use the direct connection or the session pooler (port 5432)"
+        )
     if settings.email_transport == "resend" and not settings.resend_api_key:
         problems.append("RESEND_API_KEY is required with EMAIL_TRANSPORT=resend")
+    if settings.vaada_env == Env.DEMO and settings.email_transport != "outbox":
+        problems.append("demo keeps email in the outbox; anyone can type an address there, so it must never send")
     if settings.vaada_env == Env.PRODUCTION and settings.email_transport != "resend":
         problems.append("production must send email through Resend")
 
