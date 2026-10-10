@@ -18,3 +18,7 @@ One line each. Newest at the bottom.
 - Added an index of the signed-in user's deeds at `/deeds`; the spec lists no screen for finding your own deals, and the deal room needs a way in.
 - Web reads environment, Supabase URL and key, gateway kind and dev flags from the API's `/config` at runtime, so the web build needs only `VITE_API_URL`.
 - Due dates are stored as the last second of that day in Asia/Kolkata, expressed in UTC (Fri 17 Oct 2026 becomes 2026-10-17T18:29:59Z).
+- Deed blanks at rest are set in the deed's own type (a focusable text box); focusing one swaps in a real input, so a filled deed reads as one document and Wispr Flow still has a real field to paste into.
+- Marginalia controls (strike toggles, "heard" corrections) stay out of the Tab order so Tab walks only blanks and a dictation never lands on a button; the strike toggles are repeated at the foot of the deed in the Tab order, so the keyboard path is complete.
+- Autosave runs saves one after another, each carrying the version the last returned; Send saves anything outstanding first, because publishing freezes what the server holds.
+- A struck clause gets one pen stroke per line of its words, measured from the rendered text, so the stroke ends where the words end.

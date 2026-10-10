@@ -14,9 +14,14 @@ const NONE = /^(none|no revisions?|zero|koi nahi|koi nahin|kuch nahi|nil|0)$/;
 const NOUNS =
   /\b(revisions?|revision tak|rounds?|round|changes?|badlav|iterations?|baar|times|tak|ka|ki|ke|of|feedback|edits?|max|maximum|upto|up to|at most|sirf|only|bas)\b/g;
 
-export function count(raw: string): Normalized<RevisionCount> {
+const DAY_WORDS = /\b(din|dino|dinon|days?)\b/g;
+const WEEK_WORDS = /\b(hafta|hafte|haftey|hafton|weeks?)\b/;
+
+/** A small count: revisions by default, or a number of days ("paanch din", "ek hafta") for the late-fee clause. */
+export function count(raw: string, opts: { unit?: "revisions" | "days" } = {}): Normalized<RevisionCount> {
   const { text } = prepare(raw);
   if (!text) return failed(COUNT_UNREADABLE);
+  if (opts.unit === "days") return days(text);
   if (UNLIMITED.test(text)) return inferred("unlimited", UNLIMITED_NOTE);
   const core = text.replace(NOUNS, " ").replace(/\s+/g, " ").trim();
   if (NONE.test(core) || NONE.test(text)) return exact(0);
@@ -34,4 +39,13 @@ export function count(raw: string): Normalized<RevisionCount> {
   if (n === undefined) return failed(COUNT_UNREADABLE);
   if (n > MAX_REVISIONS) return inferred(n, `${n} revisions is a lot to promise. Sure?`);
   return exact(n);
+}
+
+function days(text: string): Normalized<RevisionCount> {
+  const weeks = WEEK_WORDS.test(text);
+  const core = text.replace(WEEK_WORDS, " ").replace(DAY_WORDS, " ").replace(NOUNS, " ").replace(/\s+/g, " ").trim();
+  const n = core ? wholeNumber(core) : weeks ? 1 : undefined;
+  if (n === undefined || n <= 0) return failed("Couldn't read a number of days. Try 'paanch din' or '5 days'.");
+  const total = weeks ? n * 7 : n;
+  return total > 60 ? failed("Keep this under 60 days.") : exact(total);
 }

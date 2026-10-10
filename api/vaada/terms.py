@@ -71,6 +71,8 @@ class BlankValue(BaseModel):
     value: Any = None
     confidence: Literal["exact", "inferred", "failed"] | None = None
     note: str | None = None
+    source: Literal["dictation", "plan"] | None = None
+    dictationId: str | None = None
 
 
 class Draft(BaseModel):
