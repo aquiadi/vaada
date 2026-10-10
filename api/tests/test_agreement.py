@@ -10,7 +10,7 @@ VECTORS = Path(__file__).resolve().parents[2] / "shared" / "agreement-vectors.js
 
 
 def test_canonical_json_is_sorted_compact_and_utf8() -> None:
-    doc = {"b": 1, "a": {"z": "वादा", "y": [3, "x\"y"]}, "c": None}
+    doc = {"b": 1, "a": {"z": "वादा", "y": [3, 'x"y']}, "c": None}
     assert canonical_json(doc) == '{"a":{"y":[3,"x\\"y"],"z":"वादा"},"b":1,"c":null}'
 
 
@@ -28,7 +28,7 @@ def test_due_dates_mean_the_end_of_that_day_in_india() -> None:
 
 def test_iso_utc_requires_a_timezone() -> None:
     with pytest.raises(ValueError, match="timezone"):
-        iso_utc(datetime(2026, 1, 1))  # noqa: DTZ001
+        iso_utc(datetime(2026, 1, 1))
     assert iso_utc(datetime(2026, 10, 9, 6, 30, 15, 999, tzinfo=UTC)) == "2026-10-09T06:30:15Z"
 
 

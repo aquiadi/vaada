@@ -1,10 +1,10 @@
 import asyncio
 import os
 
-from alembic import context
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from alembic import context
 from vaada.db import async_url
 from vaada.models import SCHEMA, Base
 

@@ -7,9 +7,9 @@ from pathlib import Path
 
 import asyncpg
 import pytest
-from alembic import command
 from alembic.config import Config
 
+from alembic import command
 from vaada.clock import ManualClock
 from vaada.config import Settings
 from vaada.context import AppContext

@@ -48,7 +48,9 @@ async def test_happy_path_holds_every_milestone_and_writes_the_ledger(ctx: AppCo
     assert await ledger_total(ctx, deal.id, LedgerKind.FEE_RETAINED) == 60_500
     assert await ledger_total(ctx, deal.id, LedgerKind.HELD) == 2_500_000
     async with ctx.sessions() as session:
-        kinds_queued = set((await session.execute(select(RegistryRecord.kind).where(RegistryRecord.deal_id == deal.id))).scalars())
+        kinds_queued = set(
+            (await session.execute(select(RegistryRecord.kind).where(RegistryRecord.deal_id == deal.id))).scalars()
+        )
     assert kinds_queued == {RegistryKind.PUBLISHED, RegistryKind.ACCEPTED, RegistryKind.FUNDED}
 
 
@@ -138,11 +140,19 @@ async def test_checkout_return_needs_a_valid_signature_and_moves_no_money(ctx: A
     response = await fake(ctx).simulate_checkout(config.order_id)
     with pytest.raises(MoneyError, match="didn't check out"):
         await funding.record_checkout_return(
-            ctx, scene.deal.id, scene.client, order_id=config.order_id, payment_id=response["razorpay_payment_id"],
+            ctx,
+            scene.deal.id,
+            scene.client,
+            order_id=config.order_id,
+            payment_id=response["razorpay_payment_id"],
             signature="0" * 64,
         )
     await funding.record_checkout_return(
-        ctx, scene.deal.id, scene.client, order_id=config.order_id, payment_id=response["razorpay_payment_id"],
+        ctx,
+        scene.deal.id,
+        scene.client,
+        order_id=config.order_id,
+        payment_id=response["razorpay_payment_id"],
         signature=response["razorpay_signature"],
     )
     deal = await reload(ctx, scene.deal.id)
@@ -181,7 +191,15 @@ async def test_checkout_offers_only_methods_whose_fee_fits(ctx: AppContext) -> N
     scene = await accepted(ctx)
     config = await funding.create_order(ctx, scene.deal.id, scene.client)
     method = config.options["method"]
-    assert method == {"upi": True, "netbanking": True, "card": True, "wallet": False, "emi": False, "paylater": False, "cardless_emi": False}
+    assert method == {
+        "upi": True,
+        "netbanking": True,
+        "card": True,
+        "wallet": False,
+        "emi": False,
+        "paylater": False,
+        "cardless_emi": False,
+    }
     cards = config.options["config"]["display"]["blocks"]["cards"]["instruments"][0]
     assert set(cards["networks"]) == {"Visa", "MasterCard", "RuPay"}
 
@@ -198,7 +216,11 @@ async def test_a_transfer_that_fails_for_insufficient_balance_is_flagged(ctx: Ap
     assert milestone(deal, 2).status == MilestoneStatus.UNFUNDED
     assert await ledger_total(ctx, deal.id, LedgerKind.TRANSFER_FAILED) == 1_250_000
     async with ctx.sessions() as session:
-        flags = (await session.execute(select(ReconciliationFlag).where(ReconciliationFlag.deal_id == deal.id))).scalars().all()
+        flags = (
+            (await session.execute(select(ReconciliationFlag).where(ReconciliationFlag.deal_id == deal.id)))
+            .scalars()
+            .all()
+        )
     assert {f.kind for f in flags} >= {FlagKind.TRANSFER_FAILED, FlagKind.FEE_EXCEEDED}
 
 
@@ -244,8 +266,12 @@ async def test_lapsing_spares_a_deal_with_a_payment_in_flight(ctx: AppContext) -
     config = await funding.create_order(ctx, paying.deal.id, paying.client)
     response = await fake(ctx).simulate_checkout(config.order_id)
     await funding.record_checkout_return(
-        ctx, paying.deal.id, paying.client, order_id=config.order_id,
-        payment_id=response["razorpay_payment_id"], signature=response["razorpay_signature"],
+        ctx,
+        paying.deal.id,
+        paying.client,
+        order_id=config.order_id,
+        payment_id=response["razorpay_payment_id"],
+        signature=response["razorpay_signature"],
     )
     idle = await accepted(ctx)
     ctx.clock.advance(timedelta(days=8))  # type: ignore[attr-defined]

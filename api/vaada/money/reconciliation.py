@@ -2,7 +2,7 @@
 deadlines go to the admin queue and Sentry. Money state is never corrected from here."""
 
 import logging
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 
 from sqlalchemy import select
 
@@ -12,7 +12,6 @@ from vaada.format import ist_day, roman
 from vaada.models import Deal, Payment
 from vaada.models.enums import DealStatus, FlagKind, MilestoneStatus, PaymentStatus
 from vaada.money.common import SETTLED_STATES
-from vaada.money.entities import from_unix
 from vaada.money.flags import raise_flag
 from vaada.money.gateway import GatewayError, Transfer
 
@@ -32,7 +31,7 @@ def _drift(
     if transfer.amount_paise != transfer_paise:
         return f"Razorpay's transfer is {transfer.amount_paise} paise, ours says {transfer_paise}."
     held_by_us = milestone_status in (MilestoneStatus.HELD, MilestoneStatus.DISPUTED, MilestoneStatus.REFUND_REQUESTED)
-    lifted = transfer.hold_lifted(from_unix(now_unix))
+    lifted = transfer.hold_lifted(datetime.fromtimestamp(now_unix, tz=UTC))
     if held_by_us and lifted and transfer.amount_reversed_paise < transfer.amount_paise:
         return "We hold this milestone's money, but Razorpay shows the hold lifted."
     if milestone_status == MilestoneStatus.DELIVERED:

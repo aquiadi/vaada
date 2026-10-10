@@ -3,12 +3,14 @@ is down, records stay queued and retry with backoff, and the UI keeps saying "Re
 
 import logging
 from datetime import timedelta
-from typing import Any
+from typing import Any, cast
 
 from eth_account import Account
+from eth_typing import HexStr
 from sqlalchemy import select
 from web3 import AsyncHTTPProvider, AsyncWeb3
 from web3.exceptions import TransactionNotFound, Web3Exception
+from web3.types import TxParams
 
 from vaada.config import Settings
 from vaada.context import AppContext
@@ -79,9 +81,11 @@ class Recorder:
             bytes.fromhex(record.ref[2:]),
         )
         nonce = await self._w3.eth.get_transaction_count(self._account.address, "pending")
-        tx = await call.build_transaction(
-            {"from": self._account.address, "nonce": nonce, "chainId": self._settings.chain_id, **(await self._fees())}
+        params = cast(
+            TxParams,
+            {"from": self._account.address, "nonce": nonce, "chainId": self._settings.chain_id, **(await self._fees())},
         )
+        tx = await call.build_transaction(params)
         tx["gas"] = int(await self._w3.eth.estimate_gas(tx) * 1.2)
         signed = self._account.sign_transaction(tx)
         return "0x" + (await self._w3.eth.send_raw_transaction(signed.raw_transaction)).hex().removeprefix("0x")
@@ -90,10 +94,10 @@ class Recorder:
         try:
             if wait_seconds > 0:
                 result = await self._w3.eth.wait_for_transaction_receipt(
-                    tx_hash, timeout=wait_seconds, poll_latency=0.5
-                )  # type: ignore[arg-type]
+                    HexStr(tx_hash), timeout=wait_seconds, poll_latency=0.5
+                )
             else:
-                result = await self._w3.eth.get_transaction_receipt(tx_hash)  # type: ignore[arg-type]
+                result = await self._w3.eth.get_transaction_receipt(HexStr(tx_hash))
         except (TransactionNotFound, TimeoutError, Web3Exception):
             return None
         if int(result["status"]) != 1:

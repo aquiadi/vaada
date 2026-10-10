@@ -32,7 +32,9 @@ async def test_one_delivered_one_held_cancellation(ctx: AppContext) -> None:
     assert milestone(deal, 1).status == MilestoneStatus.RELEASED
     assert deal.status == DealStatus.CANCELLED
     async with ctx.sessions() as session:
-        kinds = set((await session.execute(select(RegistryRecord.kind).where(RegistryRecord.deal_id == deal.id))).scalars())
+        kinds = set(
+            (await session.execute(select(RegistryRecord.kind).where(RegistryRecord.deal_id == deal.id))).scalars()
+        )
     assert RegistryKind.CANCELLED in kinds
 
 

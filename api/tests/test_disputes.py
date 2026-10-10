@@ -5,12 +5,11 @@ from sqlalchemy import select
 
 from tests.factory import delivered, fake, ledger_total, milestone, reload
 from vaada.context import AppContext
-from vaada.models import Dispute, ReconciliationFlag
+from vaada.models import Dispute, ReconciliationFlag, User
 from vaada.models.enums import DealStatus, DisputeResolution, FlagKind, LedgerKind, MilestoneStatus
 from vaada.money import delivery, disputes
 from vaada.money.errors import MoneyError
 from vaada.money.gateway import GatewayUnavailableError
-from vaada.models import User
 
 
 async def _admin(ctx: AppContext) -> User:
@@ -73,7 +72,9 @@ async def test_resolve_by_release(ctx: AppContext) -> None:
     scene = await delivered(ctx)
     m = milestone(scene.deal, 1)
     dispute = await disputes.open_dispute(ctx, m.id, scene.client, "Not happy")
-    planned = await disputes.resolve(ctx, dispute.id, await _admin(ctx), DisputeResolution.RELEASE, None, "Work matches the deed.")
+    planned = await disputes.resolve(
+        ctx, dispute.id, await _admin(ctx), DisputeResolution.RELEASE, None, "Work matches the deed."
+    )
     assert planned.maker_receives_paise == m.transfer_paise and planned.refund_paise == 0
     deal = await reload(ctx, scene.deal.id)
     assert milestone(deal, 1).status == MilestoneStatus.RESOLVED
@@ -85,7 +86,9 @@ async def test_resolve_by_refund(ctx: AppContext) -> None:
     scene = await delivered(ctx)
     m = milestone(scene.deal, 1)
     dispute = await disputes.open_dispute(ctx, m.id, scene.client, "Wrong files entirely")
-    await disputes.resolve(ctx, dispute.id, await _admin(ctx), DisputeResolution.REFUND, None, "Delivery did not match.")
+    await disputes.resolve(
+        ctx, dispute.id, await _admin(ctx), DisputeResolution.REFUND, None, "Delivery did not match."
+    )
     deal = await reload(ctx, scene.deal.id)
     assert milestone(deal, 1).status == MilestoneStatus.RESOLVED
     assert milestone(deal, 1).refund_paise == m.amount_paise

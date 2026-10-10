@@ -117,13 +117,21 @@ async def test_refund_failed_webhook_reopens_the_refund_with_a_new_key(ctx: AppC
     async with fake(ctx)._store.atomic() as tx:
         refund = (await tx.all("refund"))[0]
     body = json.dumps(
-        {"entity": "event", "event": "refund.failed", "account_id": "acc_x", "contains": ["refund"],
-         "payload": {"refund": {"entity": {**refund, "status": "failed"}}}, "created_at": 1},
+        {
+            "entity": "event",
+            "event": "refund.failed",
+            "account_id": "acc_x",
+            "contains": ["refund"],
+            "payload": {"refund": {"entity": {**refund, "status": "failed"}}},
+            "created_at": 1,
+        },
         separators=(",", ":"),
     ).encode()
     from vaada.money import webhooks
 
-    await webhooks.ingest(ctx, body, fake(ctx)._sign(ctx.settings.fake_gateway_webhook_secret, body), "evt_refund_failed")
+    await webhooks.ingest(
+        ctx, body, fake(ctx)._sign(ctx.settings.fake_gateway_webhook_secret, body), "evt_refund_failed"
+    )
     await webhooks.process_pending(ctx)
     deal = await reload(ctx, scene.deal.id)
     assert milestone(deal, 1).status == MilestoneStatus.REFUND_REQUESTED

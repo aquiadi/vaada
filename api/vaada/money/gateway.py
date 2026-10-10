@@ -149,7 +149,8 @@ class CheckoutConfig:
 
 
 class PaymentsGateway(Protocol):
-    kind: Literal["fake", "razorpay"]
+    @property
+    def kind(self) -> Literal["fake", "razorpay"]: ...
 
     async def create_order(
         self, *, amount_paise: int, receipt: str, transfers: list[TransferRequest], notes: dict[str, str]

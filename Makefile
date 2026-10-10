@@ -1,6 +1,6 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := help
-.PHONY: help dev check deps infra signing-key contracts env migrate seed run stop reset test test-api test-web test-contracts lint e2e screens
+.PHONY: help dev check deps infra signing-key contracts env migrate seed run stop reset test test-api test-razorpay test-web test-contracts lint e2e screens
 
 SUPABASE ?= npx --yes supabase@2.120.0
 API_ENV := VAADA_ENV_FILE=../.dev/api.env
@@ -60,6 +60,9 @@ test: test-contracts test-api test-web ## Every fast test suite
 test-api: ## API tests (needs Postgres at TEST_DATABASE_ADMIN_URL, default the Supabase local DB)
 	cd api && uv run pytest -q
 
+test-razorpay: ## Opt-in: RazorpayGateway against real Razorpay test mode (see GO_LIVE.md for the variables)
+	cd api && uv run pytest -q -m razorpay_test_mode -rs
+
 test-web: ## Normalizers, voice interpreter, agreement hashing, types and lint
 	cd web && pnpm test && pnpm typecheck && pnpm lint
 
@@ -67,7 +70,7 @@ test-contracts: ## Foundry tests
 	cd contracts && forge test
 
 lint: ## Lint everything
-	cd api && uv run ruff check . && uv run ruff format --check .
+	cd api && uv run ruff check . && uv run ruff format --check . && uv run mypy vaada tests
 	cd web && pnpm lint
 	cd contracts && forge fmt --check
 

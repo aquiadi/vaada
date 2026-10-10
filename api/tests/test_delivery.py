@@ -1,5 +1,5 @@
 import asyncio
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -8,7 +8,7 @@ from vaada.context import AppContext
 from vaada.models.enums import DealStatus, LedgerKind, MilestoneStatus
 from vaada.money import delivery
 from vaada.money.errors import GatewayTroubleError, MoneyError
-from vaada.money.gateway import GatewayUnavailableError
+from vaada.money.gateway import GatewayUnavailableError, Transfer
 
 
 async def test_delivery_sets_a_release_date_razorpay_enforces(ctx: AppContext) -> None:
@@ -85,17 +85,19 @@ async def test_hold_expiry_releases_money_with_no_action_from_us(ctx: AppContext
     assert milestone(await reload(ctx, scene.deal.id), 1).status == MilestoneStatus.DELIVERED
 
 
-async def test_our_job_records_the_release_razorpay_already_made(ctx: AppContext) -> None:
+async def test_our_job_records_the_release_razorpay_already_made(
+    ctx: AppContext, monkeypatch: pytest.MonkeyPatch
+) -> None:
     scene = await delivered(ctx)
     m = milestone(scene.deal, 1)
     calls: list[str] = []
     original = fake(ctx).set_transfer_hold
 
-    async def spy(transfer_id: str, **kwargs: object) -> object:
+    async def spy(transfer_id: str, *, on_hold: bool, until: datetime | None) -> Transfer:
         calls.append(transfer_id)
-        return await original(transfer_id, **kwargs)  # type: ignore[arg-type]
+        return await original(transfer_id, on_hold=on_hold, until=until)
 
-    fake(ctx).set_transfer_hold = spy  # type: ignore[method-assign]
+    monkeypatch.setattr(fake(ctx), "set_transfer_hold", spy)
     ctx.clock.advance(timedelta(days=5, hours=23))  # type: ignore[attr-defined]
     assert await delivery.confirm_expired_holds(ctx) == 0
     ctx.clock.advance(timedelta(hours=1, seconds=1))  # type: ignore[attr-defined]

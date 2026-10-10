@@ -139,7 +139,7 @@ async def queue(ctx: Ctx, admin: AdminUser) -> dict[str, Any]:
                 "refund_deadline": iso(deadline),
             }
         )
-    dispute_rows.sort(key=lambda d: d["refund_deadline"] or "9999")
+    dispute_rows.sort(key=lambda d: str(d["refund_deadline"] or "9999"))
     return {
         "disputes": dispute_rows,
         "flags": [

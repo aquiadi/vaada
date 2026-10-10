@@ -73,7 +73,8 @@ async def create_draft(ctx: AppContext, maker: User, draft: Draft | None = None)
                 "note": None,
             }
         work = blanks["blanks"].get("work") or {}
-        title = work.get("value") if isinstance(work.get("value"), str) else ""
+        work_value = work.get("value")
+        title = work_value if isinstance(work_value, str) else ""
         deal = Deal(slug=new_slug(), freelancer_id=maker.id, status=DealStatus.DRAFT, draft=blanks, title=title[:120])
         session.add(deal)
         await session.flush()

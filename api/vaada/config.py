@@ -145,4 +145,4 @@ def check_boot_guards(settings: Settings) -> None:
 
 @lru_cache
 def get_settings() -> Settings:
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

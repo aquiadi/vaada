@@ -48,7 +48,12 @@ async def test_publish_reports_each_problem_against_its_blank(ctx: AppContext) -
     draft = draft_for(ctx, [Part(1_250_000, 10), Part(1_250_000, 20)]).model_dump()
     draft["blanks"]["total"] = {"raw": "pachees hazaar", "value": 2_400_000, "confidence": "exact"}
     draft["blanks"]["client_name"] = {"raw": "", "value": None}
-    draft["blanks"]["milestones.2.amount"] = {"raw": "kuch bhi", "value": None, "confidence": "failed", "note": "Couldn't read an amount here."}
+    draft["blanks"]["milestones.2.amount"] = {
+        "raw": "kuch bhi",
+        "value": None,
+        "confidence": "failed",
+        "note": "Couldn't read an amount here.",
+    }
     draft["struck"] = ["ip_transfer", "kill_fee"]
     deal = await deals.create_draft(ctx, maker, Draft.model_validate(draft))
     with pytest.raises(TermsProblems) as raised:
@@ -93,11 +98,15 @@ async def test_publish_queues_the_email_to_the_client(ctx: AppContext) -> None:
 async def test_clickwrap_needs_a_name_and_the_tick(ctx: AppContext) -> None:
     scene = await published(ctx)
     with pytest.raises(MoneyError, match="Tick the box"):
-        await deals.accept(ctx, scene.deal.id, scene.client, name_typed="Rahul Mehta", agreed=False, ip=None, user_agent=None)
+        await deals.accept(
+            ctx, scene.deal.id, scene.client, name_typed="Rahul Mehta", agreed=False, ip=None, user_agent=None
+        )
     with pytest.raises(MoneyError, match="full name"):
         await deals.accept(ctx, scene.deal.id, scene.client, name_typed=" ", agreed=True, ip=None, user_agent=None)
     with pytest.raises(MoneyError, match="can't accept it as the client"):
-        await deals.accept(ctx, scene.deal.id, scene.maker, name_typed="Aditi Rao", agreed=True, ip=None, user_agent=None)
+        await deals.accept(
+            ctx, scene.deal.id, scene.maker, name_typed="Aditi Rao", agreed=True, ip=None, user_agent=None
+        )
 
 
 async def test_acceptance_records_the_evidence_and_the_pay_by_date(ctx: AppContext) -> None:
@@ -122,7 +131,9 @@ async def test_a_deed_cannot_be_accepted_after_its_first_due_date(ctx: AppContex
     scene = await published(ctx)
     ctx.clock.set(milestone(scene.deal, 1).due_at + timedelta(seconds=1))  # type: ignore[attr-defined]
     with pytest.raises(MoneyError, match="first date has passed"):
-        await deals.accept(ctx, scene.deal.id, scene.client, name_typed="Rahul Mehta", agreed=True, ip=None, user_agent=None)
+        await deals.accept(
+            ctx, scene.deal.id, scene.client, name_typed="Rahul Mehta", agreed=True, ip=None, user_agent=None
+        )
     assert await deals.lapse_overdue(ctx) == 1
     assert (await reload(ctx, scene.deal.id)).status == DealStatus.LAPSED
 

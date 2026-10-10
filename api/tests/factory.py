@@ -4,7 +4,7 @@ import secrets
 import uuid
 from dataclasses import dataclass
 from datetime import date, timedelta
-from typing import Any
+from typing import Any, Literal
 
 from sqlalchemy import func, select
 
@@ -126,7 +126,9 @@ async def published(ctx: AppContext, parts: list[Part] | None = None, **draft_ar
 
 async def accepted(ctx: AppContext, parts: list[Part] | None = None, **draft_args: Any) -> Scene:
     scene = await published(ctx, parts, **draft_args)
-    await deals.accept(ctx, scene.deal.id, scene.client, name_typed="Rahul Mehta", agreed=True, ip="10.0.0.1", user_agent="test")
+    await deals.accept(
+        ctx, scene.deal.id, scene.client, name_typed="Rahul Mehta", agreed=True, ip="10.0.0.1", user_agent="test"
+    )
     return scene
 
 
@@ -156,12 +158,18 @@ async def resend_everything(ctx: AppContext) -> None:
         await webhooks.ingest(ctx, d.body, d.signature, d.event_id)
 
 
-async def funded(ctx: AppContext, parts: list[Part] | None = None, *, method: str = "upi", **draft_args: Any) -> Scene:
+async def funded(
+    ctx: AppContext,
+    parts: list[Part] | None = None,
+    *,
+    method: Literal["upi", "netbanking", "card"] = "upi",
+    **draft_args: Any,
+) -> Scene:
     scene = await accepted(ctx, parts, **draft_args)
     config = await funding.create_order(ctx, scene.deal.id, scene.client)
     gateway = ctx.gateway
     assert isinstance(gateway, FakeGateway)
-    response = await gateway.simulate_checkout(config.order_id, method=method)  # type: ignore[arg-type]
+    response = await gateway.simulate_checkout(config.order_id, method=method)
     await funding.record_checkout_return(
         ctx,
         scene.deal.id,
@@ -196,7 +204,11 @@ def milestone(deal: Deal, idx: int) -> Milestone:
 async def ledger_rows(ctx: AppContext, deal_id: uuid.UUID) -> list[LedgerEntry]:
     async with ctx.sessions() as session:
         return list(
-            (await session.execute(select(LedgerEntry).where(LedgerEntry.deal_id == deal_id).order_by(LedgerEntry.id))).scalars()
+            (
+                await session.execute(
+                    select(LedgerEntry).where(LedgerEntry.deal_id == deal_id).order_by(LedgerEntry.id)
+                )
+            ).scalars()
         )
 
 

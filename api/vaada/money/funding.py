@@ -76,6 +76,8 @@ async def create_order(ctx: AppContext, deal_id: uuid.UUID, payer: User) -> Chec
             milestones = list(deal.milestones)
             facts = await deal_facts(session, ctx.settings, deal)
 
+        if deal.total_paise is None:
+            raise MoneyError("This deed has no terms yet, so it can't be paid.")
         money = deal_money_for([m.amount_paise for m in milestones], ctx.settings)
         if money.order_paise != deal.total_paise + deal.client_fee_paise or any(
             m.transfer_paise != mm.transfer_paise for m, mm in zip(milestones, money.milestones, strict=True)

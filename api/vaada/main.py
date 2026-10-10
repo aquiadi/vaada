@@ -25,7 +25,9 @@ log = logging.getLogger(__name__)
 
 def _friendly(errors: list[dict[str, object]]) -> str:
     first = errors[0] if errors else {}
-    where = ".".join(str(p) for p in first.get("loc", ()) if p not in ("body", "query", "path"))  # type: ignore[union-attr]
+    loc = first.get("loc")
+    parts = loc if isinstance(loc, list | tuple) else ()
+    where = ".".join(str(p) for p in parts if p not in ("body", "query", "path"))
     message = str(first.get("msg", "Something in this request isn't right.")).removeprefix("Value error, ")
     return f"{where}: {message}" if where else message
 

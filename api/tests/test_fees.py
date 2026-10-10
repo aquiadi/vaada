@@ -42,11 +42,11 @@ def test_platform_fee_and_tds_sum_exactly_across_milestones() -> None:
     rng = random.Random(42)
     for _ in range(500):
         parts = [rng.randint(100, 5_000_000) for _ in range(rng.randint(1, 6))]
-        money = deal_money(parts, client_fee_bps=242, platform_fee_bps=rng.randint(0, 1000), tds_bps=rng.randint(0, 200))
-        assert sum(m.amount_paise for m in money.milestones) == money.total_paise
-        assert all(
-            m.transfer_paise + m.platform_fee_paise + m.tds_paise == m.amount_paise for m in money.milestones
+        money = deal_money(
+            parts, client_fee_bps=242, platform_fee_bps=rng.randint(0, 1000), tds_bps=rng.randint(0, 200)
         )
+        assert sum(m.amount_paise for m in money.milestones) == money.total_paise
+        assert all(m.transfer_paise + m.platform_fee_paise + m.tds_paise == m.amount_paise for m in money.milestones)
         assert money.transfers_paise + money.platform_fee_paise + money.tds_paise == money.total_paise
 
 
@@ -56,7 +56,10 @@ def test_default_fees_fit_every_order_shape() -> None:
         parts = [rng.randint(100, 2_000_000) for _ in range(rng.randint(1, 5))]
         money = deal_money(parts, **DEFAULTS)
         assert_transfers_fit(money, gateway_fee_bps=236, route_transfer_fee_bps=0)
-        assert money.transfers_paise + worst_case_gateway_cost(money, gateway_fee_bps=236, route_transfer_fee_bps=0) <= money.order_paise
+        assert (
+            money.transfers_paise + worst_case_gateway_cost(money, gateway_fee_bps=236, route_transfer_fee_bps=0)
+            <= money.order_paise
+        )
 
 
 def test_a_236_bps_client_fee_cannot_cover_a_236_bps_fee_on_the_grossed_up_order() -> None:

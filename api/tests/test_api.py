@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from tests.factory import draft_for, fake, Part, make_user
+from tests.factory import Part, draft_for, fake, make_user
 from vaada.auth import mint_persona_token
 from vaada.context import AppContext
 from vaada.main import create_app
@@ -23,7 +23,10 @@ async def api(ctx: AppContext) -> AsyncIterator[httpx.AsyncClient]:
 
 def auth(ctx: AppContext, user: User) -> dict[str, str]:
     token = mint_persona_token(
-        ctx.settings.persona_token_secret, user_id=user.id, email=user.email or "", name=user.display_name or "",
+        ctx.settings.persona_token_secret,
+        user_id=user.id,
+        email=user.email or "",
+        name=user.display_name or "",
         now=datetime.now(UTC),
     )
     return {"Authorization": f"Bearer {token}"}
@@ -37,7 +40,11 @@ async def deliver_webhooks(ctx: AppContext, client: httpx.AsyncClient) -> list[d
         response = await client.post(
             "/webhooks/razorpay",
             content=d.body,
-            headers={"X-Razorpay-Signature": d.signature, "X-Razorpay-Event-Id": d.event_id, "Content-Type": "application/json"},
+            headers={
+                "X-Razorpay-Signature": d.signature,
+                "X-Razorpay-Event-Id": d.event_id,
+                "Content-Type": "application/json",
+            },
         )
         assert response.status_code == 200, response.text
         results.append(response.json())
@@ -76,8 +83,12 @@ async def test_the_whole_flow_over_http(ctx: AppContext) -> None:
         maker, buyer = auth(ctx, aditi), auth(ctx, rahul)
 
         room = (await client.post("/deals", headers=maker)).json()
-        draft = draft_for(ctx, [Part(1_250_000, 10, "Advance"), Part(1_250_000, 20, "On delivery")]).model_dump(mode="json")
-        saved = await client.patch(f"/deals/{room['id']}", json={"draft": draft, "version": room["draft_version"]}, headers=maker)
+        draft = draft_for(ctx, [Part(1_250_000, 10, "Advance"), Part(1_250_000, 20, "On delivery")]).model_dump(
+            mode="json"
+        )
+        saved = await client.patch(
+            f"/deals/{room['id']}", json={"draft": draft, "version": room["draft_version"]}, headers=maker
+        )
         assert saved.status_code == 200, saved.text
 
         refused = await client.post(f"/deals/{room['id']}/publish", json={"client_email": rahul.email}, headers=maker)
@@ -99,12 +110,19 @@ async def test_the_whole_flow_over_http(ctx: AppContext) -> None:
         slug = published.json()["slug"]
 
         public = (await client.get(f"/public/deeds/{slug}")).json()
-        assert public["fees"] == {"total_paise": 2_500_000, "client_fee_paise": 60_500, "order_paise": 2_560_500, "upi_allowed": True}
+        assert public["fees"] == {
+            "total_paise": 2_500_000,
+            "client_fee_paise": 60_500,
+            "order_paise": 2_560_500,
+            "upi_allowed": True,
+        }
         assert public["viewer_role"] is None and public["deal_id"] is None
 
         unsigned = await client.post(f"/public/deeds/{slug}/accept", json={"full_name": "Rahul Mehta", "agree": True})
         assert unsigned.status_code == 401
-        accepted = await client.post(f"/public/deeds/{slug}/accept", json={"full_name": "Rahul Mehta", "agree": True}, headers=buyer)
+        accepted = await client.post(
+            f"/public/deeds/{slug}/accept", json={"full_name": "Rahul Mehta", "agree": True}, headers=buyer
+        )
         assert accepted.status_code == 200, accepted.text
         assert accepted.json()["accepted"]["email_masked"].startswith("r***@")
 
@@ -122,11 +140,16 @@ async def test_the_whole_flow_over_http(ctx: AppContext) -> None:
         deliver_action = next(a for a in first["actions"] if a["action"] == "deliver")
         assert "bank account ending 4417" in deliver_action["effect"]
 
-        delivered = (await client.post(f"/milestones/{first['id']}/deliver", json={"note": "Files in Drive"}, headers=maker)).json()
+        delivered = (
+            await client.post(f"/milestones/{first['id']}/deliver", json={"note": "Files in Drive"}, headers=maker)
+        ).json()
         assert delivered["milestones"][0]["status"] == "delivered"
         client_room = (await client.get(f"/deals/{room['id']}", headers=buyer)).json()
         approve = next(a for a in client_room["milestones"][0]["actions"] if a["action"] == "approve")
-        assert approve["effect"] == "This releases ₹12,500 to Aditi's bank account ending 4417 on the next settlement. It can't be undone."
+        assert (
+            approve["effect"]
+            == "This releases ₹12,500 to Aditi's bank account ending 4417 on the next settlement. It can't be undone."
+        )
         released = (await client.post(f"/milestones/{first['id']}/approve", headers=buyer)).json()
         assert released["milestones"][0]["status"] == "released"
         assert any("released" in e["summary"] for e in released["events"])
@@ -149,7 +172,9 @@ async def test_publish_problems_come_back_per_blank(ctx: AppContext) -> None:
     async with api(ctx) as client:
         headers = auth(ctx, aditi)
         room = (await client.post("/deals", headers=headers)).json()
-        response = await client.post(f"/deals/{room['id']}/publish", json={"client_email": "rahul@example.com"}, headers=headers)
+        response = await client.post(
+            f"/deals/{room['id']}/publish", json={"client_email": "rahul@example.com"}, headers=headers
+        )
     assert response.status_code == 422
     body = response.json()
     assert body["error"] == "terms"
@@ -158,7 +183,9 @@ async def test_publish_problems_come_back_per_blank(ctx: AppContext) -> None:
 
 async def test_webhook_endpoint_checks_signatures_and_dedupes(ctx: AppContext) -> None:
     async with api(ctx) as client:
-        forged = await client.post("/webhooks/razorpay", content=b'{"event":"payment.captured"}', headers={"X-Razorpay-Signature": "00"})
+        forged = await client.post(
+            "/webhooks/razorpay", content=b'{"event":"payment.captured"}', headers={"X-Razorpay-Signature": "00"}
+        )
         assert forged.status_code == 400
         body = b'{"event":"settlement.processed","payload":{}}'
         signature = fake(ctx)._sign(ctx.settings.fake_gateway_webhook_secret, body)
@@ -174,7 +201,14 @@ async def test_admin_queue_is_for_admins(ctx: AppContext) -> None:
     async with api(ctx) as client:
         response = await client.get("/admin/queue", headers=auth(ctx, desk))
     assert response.status_code == 200
-    assert set(response.json()) >= {"disputes", "flags", "stuck_refunds", "registry_failures", "payout_accounts", "refund_deadlines"}
+    assert set(response.json()) >= {
+        "disputes",
+        "flags",
+        "stuck_refunds",
+        "registry_failures",
+        "payout_accounts",
+        "refund_deadlines",
+    }
 
 
 async def test_drafts_are_not_public(ctx: AppContext) -> None:
@@ -220,7 +254,9 @@ async def test_voice_update_note_and_revision(ctx: AppContext) -> None:
             headers=headers,
         )
         assert recorded.status_code == 201
-        applied = await client.post(f"/voice-updates/{recorded.json()['id']}/apply", json={"indexes": [0, 1, 2]}, headers=headers)
+        applied = await client.post(
+            f"/voice-updates/{recorded.json()['id']}/apply", json={"indexes": [0, 1, 2]}, headers=headers
+        )
         results = applied.json()["results"]
     assert results[1].endswith("The deed covers 1.")
     assert results[2] == "Noted in the register."

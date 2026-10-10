@@ -40,12 +40,22 @@ async def test_recording_the_same_key_twice_is_a_no_op(ctx: AppContext) -> None:
     scene = await accepted(ctx)
     async with transaction(ctx.sessions) as session:
         first = await ledger.record(
-            session, deal_id=scene.deal.id, kind=LedgerKind.CAPTURED, amount_paise=100,
-            razorpay_object_id="pay_x", key="captured:pay_x", at=ctx.clock.now(),
+            session,
+            deal_id=scene.deal.id,
+            kind=LedgerKind.CAPTURED,
+            amount_paise=100,
+            razorpay_object_id="pay_x",
+            key="captured:pay_x",
+            at=ctx.clock.now(),
         )
         second = await ledger.record(
-            session, deal_id=scene.deal.id, kind=LedgerKind.CAPTURED, amount_paise=100,
-            razorpay_object_id="pay_x", key="captured:pay_x", at=ctx.clock.now(),
+            session,
+            deal_id=scene.deal.id,
+            kind=LedgerKind.CAPTURED,
+            amount_paise=100,
+            razorpay_object_id="pay_x",
+            key="captured:pay_x",
+            at=ctx.clock.now(),
         )
     assert (first, second) == (True, False)
 
@@ -55,6 +65,11 @@ async def test_ledger_amounts_are_positive(ctx: AppContext) -> None:
     async with transaction(ctx.sessions) as session:
         with pytest.raises(ValueError, match="positive"):
             await ledger.record(
-                session, deal_id=scene.deal.id, kind=LedgerKind.REFUNDED, amount_paise=-5,
-                razorpay_object_id="rfnd_x", key="refunded:rfnd_x", at=ctx.clock.now(),
+                session,
+                deal_id=scene.deal.id,
+                kind=LedgerKind.REFUNDED,
+                amount_paise=-5,
+                razorpay_object_id="rfnd_x",
+                key="refunded:rfnd_x",
+                at=ctx.clock.now(),
             )
