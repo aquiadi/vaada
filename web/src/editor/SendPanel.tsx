@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Button, ButtonLink, Field, Notice } from "../components/ui";
 import { ApiError, api } from "../lib/api";
@@ -75,6 +76,16 @@ export function SendPanel({ dealId, saveFirst, onProblems, onSent, ready }: Prop
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const payoutsReady = me?.payout?.status === "activated";
+  const queries = useQueryClient();
+
+  // Payout status comes from the cached /me; while Razorpay is still activating the account, look again every few
+  // seconds so Send opens the moment it's ready.
+  useEffect(() => {
+    if (payoutsReady) return;
+    void queries.invalidateQueries({ queryKey: ["me"] });
+    const timer = window.setInterval(() => void queries.invalidateQueries({ queryKey: ["me"] }), 5_000);
+    return () => window.clearInterval(timer);
+  }, [payoutsReady, queries]);
 
   async function send() {
     setError(null);
