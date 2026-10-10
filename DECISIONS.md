@@ -29,3 +29,5 @@ One line each. Newest at the bottom.
 - The linked-account business category is configuration (`ROUTE_ACCOUNT_CATEGORY`, `ROUTE_ACCOUNT_SUBCATEGORY`), since Razorpay decides it and going live should need no code change.
 - Contact address, phone and support email come from the API's configuration, so the contact page can be completed without a code change.
 - `WEB_ORIGIN` may list several origins for CORS; links in email use the first.
+- A voice update is stored only when the person applies something from it; text they discard is never sent, since nothing was acted on and it may be private.
+- Applying a voice update locks it, checks every chosen action before doing any, and records each action as it succeeds, so a retry after a failure skips what was done and a double click applies once.

@@ -14,6 +14,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     func,
+    text,
 )
 from sqlalchemy.dialects.postgresql import INET, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -170,6 +171,7 @@ class VoiceUpdate(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("users.id"))
     raw_text: Mapped[str] = mapped_column(Text)
     proposed_actions: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, default=list)
+    applied_indexes: Mapped[list[int]] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
     status: Mapped[VoiceUpdateStatus] = mapped_column(
         text_enum(VoiceUpdateStatus, "voice_update_status"), default=VoiceUpdateStatus.PROPOSED
     )

@@ -11,7 +11,7 @@ from vaada import deals, register
 from vaada.context import AppContext
 from vaada.db import transaction
 from vaada.format import roman
-from vaada.models import User, VoiceUpdate
+from vaada.models import Milestone, User, VoiceUpdate
 from vaada.models.enums import MilestoneStatus, Role, VoiceUpdateStatus
 from vaada.money import delivery
 from vaada.money.common import load_deal, require_role
@@ -84,71 +84,97 @@ async def dismiss(ctx: AppContext, update_id: uuid.UUID, user: User) -> None:
 async def apply(
     ctx: AppContext, update_id: uuid.UUID, user: User, indexes: list[int], overrides: dict[int, int]
 ) -> list[str]:
-    """Applies the chosen actions in order. `overrides` answers "which milestone?" for ambiguous cards."""
-    async with ctx.sessions() as session:
-        update = await session.get(VoiceUpdate, update_id)
+    """Applies the chosen actions in order. `overrides` answers "which milestone?" for ambiguous cards.
+
+    The update's row stays locked throughout, so two clicks can't both apply it. Each action that succeeds is
+    recorded; if a later one fails, the update stays open and a retry skips what was already done.
+    """
+    async with ctx.sessions() as session, session.begin():
+        update = await session.get(VoiceUpdate, update_id, with_for_update=True)
         if update is None or update.user_id != user.id:
             raise NotFoundError("That update")
         if update.status != VoiceUpdateStatus.PROPOSED:
             raise MoneyError("This update has already been dealt with.")
         deal = await load_deal(session, update.deal_id)
         role = require_role(deal, user.id, Role.MAKER, Role.CLIENT)
-    actions = actions_adapter.validate_python(update.proposed_actions)
-    results: list[str] = []
-    for index in sorted(set(indexes)):
-        if not 0 <= index < len(actions):
-            raise MoneyError("That action isn't part of this update.", status_code=422)
-        action = actions[index]
-        idx = overrides.get(index, getattr(action, "milestone_idx", None))
-        milestone = next((m for m in deal.milestones if m.idx == idx), None) if idx else None
-        if isinstance(action, MarkDelivered):
-            if milestone is None:
-                raise MoneyError("Pick which milestone was delivered.", status_code=422)
-            await delivery.deliver(ctx, milestone.id, user, action.note or None)
-            results.append(f"Milestone {roman(milestone.idx)} marked delivered.")
-        elif isinstance(action, LogRevision):
-            results.append(await _log_revision(ctx, deal.id, user, role, idx, action.note))
-        elif isinstance(action, Delay):
-            if milestone is None:
-                raise MoneyError("Pick which milestone is running late.", status_code=422)
-            if action.new_date is not None:
-                await deals.propose_date_change(ctx, milestone.id, user, new_due=action.new_date, reason=action.note)
-                results.append(
-                    f"Asked to move milestone {roman(milestone.idx)}. It changes only if the other party agrees."
-                )
-            else:
-                async with transaction(ctx.sessions) as session:
-                    await register.log(
-                        session,
-                        deal_id=deal.id,
-                        milestone_id=milestone.id,
-                        kind="note",
-                        role=role,
-                        actor_id=user.id,
-                        at=ctx.clock.now(),
-                        summary=f"Flagged a delay on milestone {roman(milestone.idx)}: “{action.note}”",
-                    )
-                results.append("Delay noted in the register.")
-        else:
-            async with transaction(ctx.sessions) as session:
-                await register.log(
-                    session,
-                    deal_id=deal.id,
-                    kind="note",
-                    role=role,
-                    actor_id=user.id,
-                    at=ctx.clock.now(),
-                    summary=action.text[:500],
-                )
-            results.append("Noted in the register.")
-    async with transaction(ctx.sessions) as session:
-        stored = await session.get(VoiceUpdate, update_id, with_for_update=True)
-        assert stored is not None
-        stored.status = (
-            VoiceUpdateStatus.APPLIED if len(set(indexes)) == len(actions) else VoiceUpdateStatus.PARTIALLY_APPLIED
-        )
-        stored.resolved_at = ctx.clock.now()
+        actions = actions_adapter.validate_python(update.proposed_actions)
+        chosen = sorted(set(indexes))
+        plan = [_resolve(actions, index, overrides, deal.milestones) for index in chosen]
+        done = list(update.applied_indexes)
+        results: list[str] = []
+        failure: MoneyError | None = None
+        for index, (action, milestone) in zip(chosen, plan, strict=True):
+            if index in done:
+                continue
+            try:
+                results.append(await _apply_one(ctx, deal.id, user, role, action, milestone))
+            except MoneyError as exc:
+                failure = exc
+                break
+            done.append(index)
+        update.applied_indexes = sorted(done)
+        if failure is None:
+            update.status = (
+                VoiceUpdateStatus.APPLIED if len(chosen) == len(actions) else VoiceUpdateStatus.PARTIALLY_APPLIED
+            )
+            update.resolved_at = ctx.clock.now()
+    if failure is not None:
+        raise failure
     return results
+
+
+def _resolve(
+    actions: list[Action], index: int, overrides: dict[int, int], milestones: list[Milestone]
+) -> tuple[Action, Milestone | None]:
+    """Checks a chosen action before anything is applied, so a bad choice fails with nothing done."""
+    if not 0 <= index < len(actions):
+        raise MoneyError("That action isn't part of this update.", status_code=422)
+    action = actions[index]
+    idx = overrides.get(index, getattr(action, "milestone_idx", None))
+    milestone = next((m for m in milestones if m.idx == idx), None) if idx else None
+    if isinstance(action, MarkDelivered) and milestone is None:
+        raise MoneyError("Pick which milestone was delivered.", status_code=422)
+    if isinstance(action, Delay) and milestone is None:
+        raise MoneyError("Pick which milestone is running late.", status_code=422)
+    return action, milestone
+
+
+async def _apply_one(
+    ctx: AppContext, deal_id: uuid.UUID, user: User, role: Role, action: Action, milestone: Milestone | None
+) -> str:
+    if isinstance(action, MarkDelivered) and milestone is not None:
+        await delivery.deliver(ctx, milestone.id, user, action.note or None)
+        return f"Milestone {roman(milestone.idx)} marked delivered."
+    if isinstance(action, LogRevision):
+        return await _log_revision(ctx, deal_id, user, role, milestone.idx if milestone else None, action.note)
+    if isinstance(action, Delay) and milestone is not None:
+        if action.new_date is not None:
+            await deals.propose_date_change(ctx, milestone.id, user, new_due=action.new_date, reason=action.note)
+            return f"Asked to move milestone {roman(milestone.idx)}. It changes only if the other party agrees."
+        async with transaction(ctx.sessions) as session:
+            await register.log(
+                session,
+                deal_id=deal_id,
+                milestone_id=milestone.id,
+                kind="note",
+                role=role,
+                actor_id=user.id,
+                at=ctx.clock.now(),
+                summary=f"Flagged a delay on milestone {roman(milestone.idx)}: “{action.note}”",
+            )
+        return "Delay noted in the register."
+    assert isinstance(action, Note)
+    async with transaction(ctx.sessions) as session:
+        await register.log(
+            session,
+            deal_id=deal_id,
+            kind="note",
+            role=role,
+            actor_id=user.id,
+            at=ctx.clock.now(),
+            summary=action.text[:500],
+        )
+    return "Noted in the register."
 
 
 async def _log_revision(ctx: AppContext, deal_id: uuid.UUID, user: User, role: Role, idx: int | None, note: str) -> str:
