@@ -51,6 +51,9 @@ class Settings(BaseSettings):
     fake_gateway_webhook_secret: str = "fake-webhook-secret-for-dev-and-demo-only"
     fake_gateway_activation_seconds: int = 5
     fake_gateway_chaos: str = ""
+    route_account_category: str = "services"
+    route_account_subcategory: str = "consulting"
+    new_deals_paused: bool = False
 
     client_fee_bps: int = 242
     gateway_fee_bps: int = 236
@@ -79,6 +82,9 @@ class Settings(BaseSettings):
     email_from: str = "Vaada <deeds@vaada.local>"
 
     admin_emails: str = ""
+    contact_address: str = ""
+    contact_phone: str = ""
+    support_email: str = ""
     sentry_dsn: str = ""
     rate_limit_enabled: bool = True
     log_level: str = "INFO"
@@ -87,6 +93,15 @@ class Settings(BaseSettings):
     @classmethod
     def _lower(cls, v: str) -> str:
         return v.lower()
+
+    @property
+    def web_origins(self) -> list[str]:
+        return [o.strip().rstrip("/") for o in self.web_origin.split(",") if o.strip()]
+
+    @property
+    def web_url(self) -> str:
+        """Where links in email point: the first origin, since WEB_ORIGIN may list several for CORS."""
+        return self.web_origins[0] if self.web_origins else ""
 
     @property
     def admin_email_set(self) -> frozenset[str]:
@@ -131,7 +146,7 @@ def check_boot_guards(settings: Settings) -> None:
         problems.append("PERSONA_TOKEN_SECRET must be at least 32 characters")
     if len(settings.ref_hmac_secret) < 32:
         problems.append("REF_HMAC_SECRET must be at least 32 characters")
-    if settings.web_origin.strip() in {"", "*"}:
+    if not settings.web_origins or "*" in settings.web_origins:
         problems.append("WEB_ORIGIN must name the web app's origin")
     if not settings.is_sandbox and not settings.registry_enabled:
         problems.append("CHAIN_RPC_URL, REGISTRY_ADDRESS and RECORDER_PRIVATE_KEY are required outside dev and demo")

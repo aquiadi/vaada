@@ -122,7 +122,7 @@ def create_app(ctx: AppContext | None = None, *, settings: Settings | None = Non
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[o.strip() for o in settings.web_origin.split(",") if o.strip()],
+        allow_origins=settings.web_origins,
         allow_methods=["GET", "POST", "PATCH", "DELETE"],
         allow_headers=["Authorization", "Content-Type"],
         allow_credentials=False,

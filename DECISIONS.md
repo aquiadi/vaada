@@ -25,3 +25,7 @@ One line each. Newest at the bottom.
 - The API refuses a DATABASE_URL on the transaction pooler (port 6543): the per-deal lock is a session advisory lock held across commits, which a transaction pooler would strand on another backend.
 - Demo must keep email in the outbox: it is public, and anyone could type a real stranger's address as the client.
 - The demo's Railway service seeds on every deploy (a no-op once seeded), so a fresh demo database comes up with the personas and four deeds.
+- Added `NEW_DEALS_PAUSED`: the incident plan needs a way to stop new deeds and new payments without touching money already held.
+- The linked-account business category is configuration (`ROUTE_ACCOUNT_CATEGORY`, `ROUTE_ACCOUNT_SUBCATEGORY`), since Razorpay decides it and going live should need no code change.
+- Contact address, phone and support email come from the API's configuration, so the contact page can be completed without a code change.
+- `WEB_ORIGIN` may list several origins for CORS; links in email use the first.

@@ -14,6 +14,8 @@ from typing import Any
 
 from eth_hash.auto import keccak
 
+# Frozen into every agreement's hash. Bump it when the deed's wording changes, and keep the old wording in the web
+# app for deeds that carry the old number, so a deed always reads as it did when it was accepted.
 AGREEMENT_VERSION = 1
 IST_OFFSET = timedelta(hours=5, minutes=30)
 

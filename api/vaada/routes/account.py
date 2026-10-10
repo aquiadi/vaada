@@ -35,6 +35,8 @@ async def config(ctx: Ctx) -> dict[str, Any]:
         "google_signin_enabled": s.google_signin_enabled,
         "persona_switcher": s.persona_switcher_enabled,
         "dev_tools": s.dev_tools_enabled,
+        "new_deals_paused": s.new_deals_paused,
+        "contact": {"address": s.contact_address, "phone": s.contact_phone, "email": s.support_email},
         "gateway": ctx.gateway.kind,
         "chain_id": s.chain_id,
         "registry_address": s.registry_address or None,

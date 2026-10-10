@@ -184,7 +184,7 @@ async def _apply_product(ctx: AppContext, account_pk: uuid.UUID, product: Produc
                     message=messages.payout_status(
                         name=account.legal_name or user.display_name or "there",
                         status=account.status.value,
-                        payouts_url=f"{ctx.settings.web_origin}/payouts",
+                        payouts_url=f"{ctx.settings.web_url}/payouts",
                     ),
                 )
         return account

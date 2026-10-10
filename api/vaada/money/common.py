@@ -111,9 +111,20 @@ async def deal_facts(session: AsyncSession, settings: Settings, deal: Deal) -> D
         title=deal.title or "this work",
         maker=maker_name,
         client=terms.get("client_name") or "the Client",
-        room_url=f"{settings.web_origin}/d/{deal.id}",
-        deed_url=f"{settings.web_origin}/a/{deal.slug}",
+        room_url=f"{settings.web_url}/d/{deal.id}",
+        deed_url=f"{settings.web_url}/a/{deal.slug}",
     )
+
+
+def refuse_if_paused(settings: Settings) -> None:
+    """NEW_DEALS_PAUSED stops new deeds going out and new money coming in; money already held carries on."""
+    if settings.new_deals_paused:
+        raise MoneyError(
+            "Vaada isn't taking new deeds or payments just now. Deeds already paid carry on as agreed. "
+            "Please try again later.",
+            status_code=503,
+            code="paused",
+        )
 
 
 def milestone_facts(m: Milestone) -> MilestoneFacts:

@@ -39,6 +39,8 @@ async def build_context(settings: Settings, *, pool_size: int = 10) -> AppContex
             key_id=settings.razorpay_key_id,
             key_secret=settings.razorpay_key_secret,
             webhook_secret=settings.razorpay_webhook_secret,
+            business_category=settings.route_account_category,
+            business_subcategory=settings.route_account_subcategory,
         )
     return AppContext(settings=settings, engine=engine, sessions=sessions, clock=clock, gateway=gateway)
 

@@ -69,3 +69,9 @@ def test_demo_never_sends_real_email(db_url: str) -> None:
     with pytest.raises(BootGuardError, match="outbox"):
         check_boot_guards(make_settings(db_url, vaada_env="demo", email_transport="resend", resend_api_key="re_123"))
     check_boot_guards(make_settings(db_url, vaada_env="demo", email_transport="outbox"))
+
+
+def test_links_in_email_use_the_first_web_origin(db_url: str) -> None:
+    settings = make_settings(db_url, web_origin="https://vaada.in/, https://www.vaada.in")
+    assert settings.web_origins == ["https://vaada.in", "https://www.vaada.in"]
+    assert settings.web_url == "https://vaada.in"

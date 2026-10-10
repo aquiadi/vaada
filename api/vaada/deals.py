@@ -34,6 +34,7 @@ from vaada.money.common import (
     milestone_facts,
     party_emails,
     payout_account_of,
+    refuse_if_paused,
     require_role,
 )
 from vaada.money.errors import MoneyError, NotFoundError
@@ -153,6 +154,7 @@ async def publish(ctx: AppContext, deal_id: uuid.UUID, maker: User, client_email
         require_role(deal, maker.id, Role.MAKER)
         if deal.status != DealStatus.DRAFT:
             raise MoneyError("This deed has already been sent.")
+        refuse_if_paused(ctx.settings)
         if maker.email and client_email == maker.email.lower():
             raise MoneyError("That's your own email. Send the deed to your client.", status_code=422)
         payout = await payout_account_of(session, maker.id)

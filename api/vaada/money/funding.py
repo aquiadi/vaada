@@ -31,6 +31,7 @@ from vaada.money.common import (
     maker_id_of,
     party_emails,
     payout_account_of,
+    refuse_if_paused,
     require_role,
 )
 from vaada.money.errors import GatewayTroubleError, MoneyError, NotFoundError
@@ -63,6 +64,7 @@ async def create_order(ctx: AppContext, deal_id: uuid.UUID, payer: User) -> Chec
             now = ctx.clock.now()
             if deal.status != DealStatus.ACCEPTED:
                 raise MoneyError("This deed isn't waiting for payment.")
+            refuse_if_paused(ctx.settings)
             if deal.pay_by is not None and now > deal.pay_by:
                 raise MoneyError("The time to pay this deed has passed. Ask the Maker to re-issue it with new dates.")
             existing = (

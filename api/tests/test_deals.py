@@ -22,6 +22,19 @@ async def test_publishing_needs_an_activated_payout_account(ctx: AppContext) -> 
     assert raised.value.code == "payouts_not_ready"
 
 
+async def test_nothing_new_goes_out_while_new_deals_are_paused(ctx: AppContext) -> None:
+    maker = await make_user(ctx, "Aditi Rao")
+    await give_payouts(ctx, maker)
+    deal = await deals.create_draft(ctx, maker, draft_for(ctx, [Part(2_500_000, 10)]))
+    ctx.settings.new_deals_paused = True
+    with pytest.raises(MoneyError) as raised:
+        await deals.publish(ctx, deal.id, maker, "rahul@example.com")
+    assert raised.value.code == "paused"
+    assert (await reload(ctx, deal.id)).status == DealStatus.DRAFT
+    ctx.settings.new_deals_paused = False
+    await deals.publish(ctx, deal.id, maker, "rahul@example.com")
+
+
 async def test_publish_freezes_terms_behind_a_hash_anyone_can_recompute(ctx: AppContext) -> None:
     scene = await published(ctx)
     deal = scene.deal

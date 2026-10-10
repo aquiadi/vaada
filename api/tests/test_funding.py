@@ -280,3 +280,13 @@ async def test_lapsing_spares_a_deal_with_a_payment_in_flight(ctx: AppContext) -
     assert (await reload(ctx, paying.deal.id)).status == DealStatus.ACCEPTED
     await pump(ctx)
     assert (await reload(ctx, paying.deal.id)).status == DealStatus.FUNDED
+
+
+async def test_no_order_is_created_while_new_deals_are_paused(ctx: AppContext) -> None:
+    scene = await accepted(ctx)
+    ctx.settings.new_deals_paused = True
+    with pytest.raises(MoneyError) as raised:
+        await funding.create_order(ctx, scene.deal.id, scene.client)
+    assert raised.value.code == "paused"
+    ctx.settings.new_deals_paused = False
+    assert (await funding.create_order(ctx, scene.deal.id, scene.client)).order_id

@@ -43,19 +43,27 @@ from vaada.money.gateway import (
 
 T = TypeVar("T")
 
-# Razorpay's category list for linked accounts; confirm the right pair for freelancers with Razorpay (GO_LIVE.md).
-BUSINESS_CATEGORY = "services"
-BUSINESS_SUBCATEGORY = "consulting"
 TIMEOUT_SECONDS = 20
 
 
 class RazorpayGateway:
     kind: Literal["razorpay"] = "razorpay"
 
-    def __init__(self, *, key_id: str, key_secret: str, webhook_secret: str) -> None:
+    def __init__(
+        self,
+        *,
+        key_id: str,
+        key_secret: str,
+        webhook_secret: str,
+        business_category: str = "services",
+        business_subcategory: str = "consulting",
+    ) -> None:
         self.key_id = key_id
         self._key_secret = key_secret
         self._webhook_secret = webhook_secret
+        # From Razorpay's list for linked accounts; which pair fits freelancers is Razorpay's call (GO_LIVE.md).
+        self._business_category = business_category
+        self._business_subcategory = business_subcategory
         session = requests.Session()
         session.request = _with_timeout(session.request)  # type: ignore[method-assign]
         self._client = razorpay.Client(session=session, auth=(key_id, key_secret))
@@ -156,8 +164,8 @@ class RazorpayGateway:
                 "business_type": profile.business_type,
                 "contact_name": profile.legal_name,
                 "profile": {
-                    "category": BUSINESS_CATEGORY,
-                    "subcategory": BUSINESS_SUBCATEGORY,
+                    "category": self._business_category,
+                    "subcategory": self._business_subcategory,
                     "addresses": {
                         "registered": {
                             "street1": profile.street1,
