@@ -41,3 +41,4 @@ One line each. Newest at the bottom.
 - Effect sentences and emails state what reaches the Maker (`transfer_paise`), not the part's gross amount.
 - A path id that can't be valid (a truncated link) answers 404, not a validation message.
 - The § before each clause number is ornament (it is hidden from screen readers), so the light theme's gold, at 3.4:1 on paper, stays as it is; gold is never used for text that carries meaning.
+- An accepted deed can be paid until the end of its seventh day in India (or its first due date, if sooner), since people are told the day, not the minute.

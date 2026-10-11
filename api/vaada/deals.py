@@ -360,7 +360,9 @@ async def accept(
         deal.client_id = client.id
         deal.status = DealStatus.ACCEPTED
         deal.accepted_at = now
-        deal.pay_by = min(now + timedelta(days=ctx.settings.accept_pay_days), first_due(deal))
+        # The whole of the last day counts, as it does for due dates, since people are told the day.
+        last_day = end_of_day_ist(ist_date(now + timedelta(days=ctx.settings.accept_pay_days)))
+        deal.pay_by = min(last_day, first_due(deal))
         await register.log(
             session,
             deal_id=deal.id,

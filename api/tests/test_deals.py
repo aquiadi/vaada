@@ -7,7 +7,7 @@ from sqlalchemy import select
 
 from tests.factory import Part, accepted, draft_for, give_payouts, make_user, milestone, published, reload
 from vaada import deals
-from vaada.agreement import canonical_json, keccak_hex
+from vaada.agreement import canonical_json, end_of_day_ist, ist_date, keccak_hex
 from vaada.context import AppContext
 from vaada.models import Acceptance, OutboundEmail
 from vaada.models.enums import DealStatus
@@ -132,7 +132,8 @@ async def test_acceptance_records_the_evidence_and_the_pay_by_date(ctx: AppConte
     assert str(acceptance.ip) == "10.0.0.1"
     deal = await reload(ctx, scene.deal.id)
     assert deal.status == DealStatus.ACCEPTED
-    assert deal.pay_by == ctx.clock.now() + timedelta(days=7)
+    # The whole of the seventh day in India, since the client is told the day.
+    assert deal.pay_by == end_of_day_ist(ist_date(ctx.clock.now() + timedelta(days=7)))
 
 
 async def test_pay_by_never_runs_past_the_first_due_date(ctx: AppContext) -> None:
