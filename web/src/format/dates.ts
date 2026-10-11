@@ -26,7 +26,7 @@ export function formatIsoDate(iso: string): string {
   return formatCalendarDate(fromIsoDate(iso));
 }
 
-function ordinal(n: number): string {
+export function ordinal(n: number): string {
   const mod100 = n % 100;
   if (mod100 >= 11 && mod100 <= 13) return `${n}th`;
   return `${n}${["th", "st", "nd", "rd"][n % 10] ?? "th"}`;

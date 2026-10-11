@@ -1,8 +1,8 @@
 import { formatInstantIst, formatIsoDate, istDateOf } from "../format/dates";
 import type { MilestoneStatus, Room, RoomMilestone } from "../lib/types";
 
-export function firstName(name: string): string {
-  return name.split(/\s+/)[0] ?? name;
+export function firstName(name: string | null | undefined): string {
+  return (name ?? "").trim().split(/\s+/)[0] ?? "";
 }
 
 /** "Wed 14 Oct 2026" for a due date, which the API stores as the last second of that day in IST. */

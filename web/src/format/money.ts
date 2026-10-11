@@ -15,12 +15,10 @@ export function formatRupees(paise: number): string {
   return `${sign}₹${indianGrouping.format(rupees)}${fraction}`;
 }
 
-/** Plain digits for an editable field: 25000 or 25000.50. */
-export function paiseToPlain(paise: number): string {
-  assertPaise(paise);
-  const rem = Math.abs(paise) % 100;
-  const rupees = (Math.abs(paise) - rem) / 100;
-  return `${paise < 0 ? "-" : ""}${rupees}${rem === 0 ? "" : `.${String(rem).padStart(2, "0")}`}`;
+/** The processing fee on a deal total, rounded up to the paisa, exactly as the API charges it. */
+export function processingFeePaise(totalPaise: number, bps: number): number {
+  assertPaise(totalPaise);
+  return Math.floor((totalPaise * bps + 9_999) / 10_000);
 }
 
 const ONES = [
