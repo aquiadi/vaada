@@ -26,10 +26,14 @@
 
 ## Next
 
-- Being built now: front pages (home, login, payouts, outbox, not found) and legal pages with pricing.
-- Then: the contact page reads `/config.contact`; a six-lens review (hard rules, design, accessibility, web/API contract, code style, logic) and fixes; screenshots of every route at 1440 and 390 in both themes, two honest passes, final shots in docs/screens (`make screens`).
-- Before the final screenshots, reset the dev database (`make reset`, then `make dev`): it holds drafts and deals made while building.
+- A six-lens review (hard rules, design, accessibility, web/API contract, code style, logic) found 84 confirmed problems.
+  The API, config and shared-helper ones are fixed and committed (stuck releases after refunds, Sentry frame variables,
+  data export and account deletion, voice-update privacy, stale tokens on public pages, amounts after fees, plain errors,
+  input limits, rate limits, dead code). The web ones are being fixed now by five agents on disjoint files; when they
+  report: typecheck, lint, tests, the e2e, then commit.
+- Then the screenshot passes: reset the dev database (it collects test deals), `make screens`, look at every shot, fix,
+  repeat; final shots in docs/screens.
 
 ## Broken
 
-- Nothing known. The e2e test (`make e2e`) passes: sign-up by emailed code, payouts, three deeds dictated by keyboard bursts, accept and pay as a persona, deliver and approve, auto-release after the review window, and a mutual cancellation with the undelivered part refunded.
+- Nothing known beyond the review findings above. The e2e test (`make e2e`) passed before the web fixes began.
