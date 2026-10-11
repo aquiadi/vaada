@@ -141,7 +141,7 @@ export function DeedBody({ s, facts }: { s: DeedSlots; facts: DeedFacts }) {
         If a part is not delivered within {graceWords} days after its due date, the Client may ask for that part's money back, and{" "}
         {refundSentence(facts)}. Either party may raise a dispute about a delivered part during its review period; the money then
         stays held until Vaada decides to release it, return it or divide it, and writes to both parties with its reasons. The
-        parties may end the rest of this deed by agreeing to on Vaada: money for work not yet delivered goes back to the Client,
+        parties may end the rest of this deed by agreeing to do so on Vaada: money for work not yet delivered goes back to the Client,
         and money already released stays released.
       </Para>
       <Para margin={margin(["kill_fee.percent"])}>

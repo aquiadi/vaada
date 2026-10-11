@@ -43,3 +43,5 @@ One line each. Newest at the bottom.
 - The § before each clause number is ornament (it is hidden from screen readers), so the light theme's gold, at 3.4:1 on paper, stays as it is; gold is never used for text that carries meaning.
 - An accepted deed can be paid until the end of its seventh day in India (or its first due date, if sooner), since people are told the day, not the minute.
 - Alt+Down (Option+Down on a Mac) in a focused blank opens its "heard" correction, so correcting what was heard has a keyboard path while the margin words stay out of the Tab order.
+- Deed wording version 1 was corrected in place before launch (a missing "do so" in §5), since no one outside dev has accepted it; from launch on, any change to the deed's words bumps AGREEMENT_VERSION and keeps the old text.
+- Full-page screenshots hide the dev persona slip: it is fixed to the first viewport, so Playwright would draw it over the middle of the page.
