@@ -10,8 +10,15 @@ export interface AppConfig {
   persona_switcher: boolean;
   dev_tools: boolean;
   new_deals_paused: boolean;
-  /** The owner's published contact details; each is empty until set. */
-  contact: { address: string; phone: string; email: string };
+  /** The owner's published details for the policy pages; each is empty until set. */
+  contact: {
+    address: string;
+    phone: string;
+    email: string;
+    legal_entity: string;
+    grievance_officer: string;
+    jurisdiction_city: string;
+  };
   gateway: "fake" | "razorpay";
   chain_id: number;
   registry_address: string | null;
