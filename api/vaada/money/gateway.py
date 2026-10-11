@@ -39,9 +39,6 @@ class Order:
     receipt: str
 
 
-TransferStatus = Literal["created", "pending", "processed", "failed", "reversed", "partially_reversed"]
-
-
 @dataclass(frozen=True)
 class Transfer:
     id: str

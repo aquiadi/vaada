@@ -141,8 +141,6 @@ class FakeGateway:
             raise GatewayRejectedError(f"The id provided does not exist: {id_}", code="BAD_REQUEST_ERROR")
         return found
 
-    # Orders and payments
-
     async def create_order(
         self, *, amount_paise: int, receipt: str, transfers: list[TransferRequest], notes: dict[str, str]
     ) -> Order:
@@ -311,8 +309,6 @@ class FakeGateway:
         async with self._store.atomic() as tx:
             return payment_from(await self._require(tx, "payment", payment_id))
 
-    # Transfers
-
     def _settle_lazily(self, transfer: dict[str, Any]) -> bool:
         """Applies what time alone does to a transfer: a hold that reaches on_hold_until lifts, and a
         lifted hold settles to the linked account after the settlement delay. Returns True if changed."""
@@ -415,8 +411,6 @@ class FakeGateway:
             await tx.put("merchant", "platform", merchant)
             return reversal_from(reversal)
 
-    # Refunds
-
     async def refund_payment(
         self, payment_id: str, *, amount_paise: int, idempotency_key: str, notes: dict[str, str]
     ) -> Refund:
@@ -471,8 +465,6 @@ class FakeGateway:
     async def merchant_balance(self) -> int:
         async with self._store.atomic() as tx:
             return int((await self._merchant(tx))["balance"])
-
-    # Linked accounts
 
     async def create_linked_account(self, profile: LinkedAccountProfile) -> str:
         self._maybe_fail("create_linked_account")
@@ -623,8 +615,6 @@ class FakeGateway:
             for product in await tx.all("product"):
                 await self._decide_if_due(tx, product)
 
-    # Signatures and webhooks
-
     def _sign(self, secret: str, body: bytes) -> str:
         return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
@@ -658,9 +648,6 @@ class FakeGateway:
 
     async def mark_delivered(self, seq: int) -> None:
         await self._store.mark_delivered(seq, self._now())
-
-    async def retry_later(self, seq: int, delay: timedelta) -> None:
-        await self._store.retry_later(seq, self._now() + delay)
 
     async def seed_activated_account(self, *, legal_name: str, email: str, bank_last4: str) -> tuple[str, str, str]:
         """Dev and demo seeding: a linked account that has already passed review."""

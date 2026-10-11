@@ -9,15 +9,16 @@ import hashlib
 import hmac
 import json
 import secrets
-from datetime import UTC, date, datetime, time, timedelta
+from datetime import UTC, date, datetime, time
 from typing import Any
 
 from eth_hash.auto import keccak
 
+from vaada.format import IST
+
 # Frozen into every agreement's hash. Bump it when the deed's wording changes, and keep the old wording in the web
 # app for deeds that carry the old number, so a deed always reads as it did when it was accepted.
 AGREEMENT_VERSION = 1
-IST_OFFSET = timedelta(hours=5, minutes=30)
 
 
 def canonical_json(doc: Any) -> str:
@@ -41,11 +42,11 @@ def iso_utc(moment: datetime) -> str:
 def end_of_day_ist(day: date) -> datetime:
     """A due date means the whole of that day in India: 23:59:59 IST."""
     local_end = datetime.combine(day, time(23, 59, 59))
-    return (local_end - IST_OFFSET).replace(tzinfo=UTC)
+    return (local_end - IST).replace(tzinfo=UTC)
 
 
 def ist_date(moment: datetime) -> date:
-    return (moment.astimezone(UTC) + IST_OFFSET).date()
+    return (moment.astimezone(UTC) + IST).date()
 
 
 def registry_ref(secret: str, razorpay_id: str) -> str:

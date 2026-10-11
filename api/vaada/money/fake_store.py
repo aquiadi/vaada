@@ -6,7 +6,7 @@ import json
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Any, Protocol
 
 from sqlalchemy import text
@@ -37,8 +37,6 @@ class FakeStore(Protocol):
     async def due_events(self, now: datetime, limit: int) -> list[QueuedEvent]: ...
 
     async def mark_delivered(self, seq: int, now: datetime) -> None: ...
-
-    async def retry_later(self, seq: int, after: datetime) -> None: ...
 
 
 class MemoryFakeStore:
@@ -71,9 +69,6 @@ class MemoryFakeStore:
 
     async def mark_delivered(self, seq: int, now: datetime) -> None:
         self.events[seq - 1]["delivered"] = now
-
-    async def retry_later(self, seq: int, after: datetime) -> None:
-        self.events[seq - 1]["after"] = after
 
 
 class _PgTx:
@@ -125,7 +120,7 @@ class PostgresFakeStore:
                 text(
                     "CREATE TABLE IF NOT EXISTS fakegw.events ("
                     "seq bigserial PRIMARY KEY, event jsonb NOT NULL, deliver_after timestamptz NOT NULL, "
-                    "delivered_at timestamptz, attempts int NOT NULL DEFAULT 0)"
+                    "delivered_at timestamptz)"
                 )
             )
 
@@ -151,13 +146,3 @@ class PostgresFakeStore:
             await conn.execute(
                 text("UPDATE fakegw.events SET delivered_at = :now WHERE seq = :seq"), {"now": now, "seq": seq}
             )
-
-    async def retry_later(self, seq: int, after: datetime) -> None:
-        async with self._engine.begin() as conn:
-            await conn.execute(
-                text("UPDATE fakegw.events SET deliver_after = :after, attempts = attempts + 1 WHERE seq = :seq"),
-                {"after": after, "seq": seq},
-            )
-
-
-RETRY_DELAY = timedelta(seconds=10)

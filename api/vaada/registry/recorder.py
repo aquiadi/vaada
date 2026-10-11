@@ -9,7 +9,7 @@ from eth_account import Account
 from eth_typing import HexStr
 from sqlalchemy import select
 from web3 import AsyncHTTPProvider, AsyncWeb3
-from web3.exceptions import TransactionNotFound, Web3Exception
+from web3.exceptions import TimeExhausted, TransactionNotFound, Web3Exception
 from web3.types import TxParams
 
 from vaada.config import Settings
@@ -98,7 +98,7 @@ class Recorder:
                 )
             else:
                 result = await self._w3.eth.get_transaction_receipt(HexStr(tx_hash))
-        except (TransactionNotFound, TimeoutError, Web3Exception):
+        except (TransactionNotFound, TimeExhausted):
             return None
         if int(result["status"]) != 1:
             raise RuntimeError(f"registry transaction {tx_hash} reverted")
