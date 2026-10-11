@@ -1,16 +1,19 @@
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Link } from "react-router";
 import { Button, ButtonLink, Field, Notice } from "../components/ui";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 import { useMe } from "../lib/session";
-import type { Room } from "../lib/types";
+import type { Me, Payout, Room } from "../lib/types";
 import { email as normalizeEmail } from "../normalize";
+import { firstName } from "../room/words";
 import { DraftNotSaved } from "./useAutosave";
 
-function firstName(name: string | null | undefined): string {
-  return (name ?? "").split(/\s+/)[0] ?? "";
-}
+/** Razorpay usually takes minutes to days to activate an account, so a look every half minute is plenty. */
+const PAYOUT_POLL_MS = 30_000;
+
+const focusOnMount = (element: HTMLElement | null) => element?.focus();
 
 export function whatsappLink(room: Room, link: string): string {
   const client = firstName(room.client.name);
@@ -32,7 +35,7 @@ export function SentPanel({ room }: { room: Room }) {
   const [copied, setCopied] = useState(false);
   return (
     <section aria-labelledby="sent-heading" className="mt-8 border-t-2 border-double border-gold pt-6">
-      <h2 id="sent-heading" className="font-display text-h3 text-ink">
+      <h2 id="sent-heading" ref={focusOnMount} tabIndex={-1} className="font-display text-h3 text-ink focus:outline-none">
         Sent to {room.client.email_masked ?? "your client"}.
       </h2>
       <p className="measure mt-2 text-body text-ink-soft">
@@ -78,14 +81,18 @@ export function SendPanel({ dealId, saveFirst, onProblems, onSent, ready }: Prop
   const payoutsReady = me?.payout?.status === "activated";
   const queries = useQueryClient();
 
-  // Payout status comes from the cached /me; while Razorpay is still activating the account, look again every few
-  // seconds so Send opens the moment it's ready.
-  useEffect(() => {
-    if (payoutsReady) return;
-    void queries.invalidateQueries({ queryKey: ["me"] });
-    const timer = window.setInterval(() => void queries.invalidateQueries({ queryKey: ["me"] }), 5_000);
-    return () => window.clearInterval(timer);
-  }, [payoutsReady, queries]);
+  // /me reads only our database. While Razorpay is reviewing the account (the one state that changes without the
+  // Maker doing anything), ask Razorpay through /payouts, so Send opens soon after the account is activated.
+  useQuery({
+    queryKey: ["payouts"],
+    queryFn: async () => {
+      const live = await api.get<{ payout: Payout | null }>("/payouts");
+      queries.setQueryData<Me | null>(["me"], (current) => (current ? { ...current, payout: live.payout } : current));
+      return live;
+    },
+    enabled: me?.payout?.status === "under_review",
+    refetchInterval: PAYOUT_POLL_MS,
+  });
 
   async function send() {
     setError(null);
@@ -106,7 +113,7 @@ export function SendPanel({ dealId, saveFirst, onProblems, onSent, ready }: Prop
       } else if (caught instanceof DraftNotSaved) {
         setError("Your latest changes haven't saved, so nothing was sent. Check your connection and try again.");
       } else {
-        setError(caught instanceof ApiError ? caught.message : "That didn't go out. Nothing was sent; try again.");
+        setError(explain(caught, "We couldn't confirm the deed went out. Reload the page: if it was sent, it opens in the deal room."));
       }
     } finally {
       setBusy(false);

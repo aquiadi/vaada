@@ -1,7 +1,6 @@
 import { formatIsoDate } from "../format/dates";
 import { formatRupees } from "../format/money";
 import { amount, count, date, email, organisation, personName, plan, work, type CalendarDate, type Normalized, type PlanValue } from "../normalize";
-import { fromIsoDate } from "../normalize/calendar";
 import { percent } from "../normalize/percent";
 
 export type BlankKind = "name" | "org" | "work" | "count" | "amount" | "plan" | "date" | "days" | "percent" | "text" | "email";
@@ -15,8 +14,13 @@ export interface BlankDef {
   minCh: number;
 }
 
-export const STRIKABLE = ["client_organisation", "late_fee", "kill_fee", "ip_transfer"] as const;
+const STRIKABLE = ["client_organisation", "late_fee", "kill_fee", "ip_transfer"] as const;
 export type StrikableKey = (typeof STRIKABLE)[number];
+
+/** The optional clause a blank belongs to: "late_fee.days" goes with the late fee, "client_organisation" with itself. */
+export function clauseOf(key: string): StrikableKey | null {
+  return STRIKABLE.find((clause) => key === clause || key.startsWith(`${clause}.`)) ?? null;
+}
 
 const FIXED: BlankDef[] = [
   { key: "maker_name", kind: "name", label: "Your name, the Maker", placeholder: "your name", minCh: 12 },
@@ -126,6 +130,12 @@ export function numberWord(n: number): string {
   return SMALL[n] ?? String(n);
 }
 
+/** "one day" rather than "24 hours": the hold buffer reads as days whenever it is whole days. */
+export function hoursInWords(hours: number): string {
+  if (hours > 0 && hours % 24 === 0) return `${numberWord(hours / 24)} ${hours === 24 ? "day" : "days"}`;
+  return `${numberWord(hours)} ${hours === 1 ? "hour" : "hours"}`;
+}
+
 function shareText(share: PlanValue["parts"][number]["share"]): string {
   switch (share.type) {
     case "percent":
@@ -139,7 +149,7 @@ function shareText(share: PlanValue["parts"][number]["share"]): string {
   }
 }
 
-export function describePlan(value: PlanValue): string {
+function describePlan(value: PlanValue): string {
   const parts = value.parts;
   if (parts.length === 1) return `all of it ${parts[0]!.stage === "advance" ? "in advance" : "on delivery"}`;
   if (parts.every((p) => p.share.type === "equal")) return `in ${numberWord(parts.length)} equal parts`;
@@ -165,8 +175,4 @@ export function displayValue(kind: BlankKind, value: unknown): string {
     default:
       return String(value);
   }
-}
-
-export function isoToCalendar(iso: string): CalendarDate {
-  return fromIsoDate(iso);
 }

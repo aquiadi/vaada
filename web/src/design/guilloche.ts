@@ -13,7 +13,7 @@ function pathFrom(points: Point[], close = false): string {
 }
 
 /** Interlaced waves running from a to b, displaced along the edge's normal. */
-export function ropePaths(a: Point, b: Point, width: number, strands = 7, step = 1.6): string[] {
+function ropePaths(a: Point, b: Point, width: number, strands = 7, step = 1.6): string[] {
   const dx = b[0] - a[0];
   const dy = b[1] - a[1];
   const length = Math.hypot(dx, dy);
@@ -40,7 +40,7 @@ export function ropePaths(a: Point, b: Point, width: number, strands = 7, step =
 }
 
 /** A rosette: several hypotrochoids, each turned a little, centred on (cx, cy). */
-export function rosettePaths(cx: number, cy: number, radius: number, copies = 6, lobes = 9): string[] {
+function rosettePaths(cx: number, cy: number, radius: number, copies = 6, lobes = 9): string[] {
   const out: string[] = [];
   const R = 1;
   const r = R / lobes;
@@ -88,9 +88,16 @@ export interface FrameGeometry {
   panel: { x: number; y: number; w: number; h: number } | null;
 }
 
-/** The whole border for a sheet of w × h. The top edge leaves a gap for the denomination panel. */
-export function frameGeometry(w: number, h: number, options: { band: number; inset: number; panelWidth: number }): FrameGeometry {
-  const { band, inset, panelWidth } = options;
+/**
+ * The whole border for a sheet of w × h. The top edge leaves a gap for the denomination panel, which is as tall as
+ * the sheet says its two lines of type need.
+ */
+export function frameGeometry(
+  w: number,
+  h: number,
+  options: { band: number; inset: number; panelWidth: number; panelHeight: number },
+): FrameGeometry {
+  const { band, inset, panelWidth, panelHeight } = options;
   const x0 = inset;
   const y0 = inset;
   const x1 = w - inset;
@@ -102,7 +109,7 @@ export function frameGeometry(w: number, h: number, options: { band: number; ins
   const right = x1 - mid;
   const corner = band * 1.1;
   const panelW = Math.min(panelWidth, w - 2 * (inset + band * 3));
-  const panel = panelW > 120 ? { x: (w - panelW) / 2, y: inset - 2, w: panelW, h: band * 2.6 } : null;
+  const panel = panelW > 120 ? { x: (w - panelW) / 2, y: inset - 2, w: panelW, h: panelHeight } : null;
 
   const ropes: string[] = [];
   if (panel) {

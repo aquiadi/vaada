@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ApiError, api } from "../lib/api";
+import { api } from "../lib/api";
+import { explain } from "../lib/errors";
 import type { Draft } from "../lib/types";
 
 export type SaveStatus = { kind: "idle" } | { kind: "saving" } | { kind: "saved"; at: Date } | { kind: "error"; message: string };
@@ -37,7 +38,7 @@ export function useAutosave(dealId: string, draft: Draft, edits: number, initial
         savedEdits.current = editsInThisSave;
         setStatus({ kind: "saved", at: new Date() });
       } catch (error) {
-        setStatus({ kind: "error", message: error instanceof ApiError ? error.message : "Couldn't save just now. Your words are still here." });
+        setStatus({ kind: "error", message: explain(error, "Couldn't save just now. Your words are still here.") });
       }
     });
     return queue.current;

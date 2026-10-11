@@ -1,12 +1,18 @@
 import { useLayoutEffect, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
 import { blankDef, displayValue } from "../deed/blanks";
+import { IDLE_MS, isBurst } from "./dictation";
 import { useEditor } from "./EditorContext";
-
-const IDLE_MS = 400;
-/** Keystrokes arrive one character at a time; anything bigger with no key behind it came in one burst. */
-const KEY_GAP_MS = 80;
+import { heardDiffers } from "./state";
 
 let measureContext: CanvasRenderingContext2D | null = null;
+
+/**
+ * Built from longhands: the deed's old-style figures make the `font` shorthand unrepresentable, and Chromium
+ * then reports it as "", which the canvas ignores and measures at 10px sans-serif.
+ */
+function canvasFont(style: CSSStyleDeclaration): string {
+  return `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`;
+}
 
 function textWidth(text: string, font: string): number {
   measureContext ??= document.createElement("canvas").getContext("2d");
@@ -48,8 +54,7 @@ export function BlankInput({ blankKey }: { blankKey: string }) {
   useLayoutEffect(() => {
     const input = inputRef.current;
     if (!input) return;
-    const font = getComputedStyle(input).font;
-    const measured = textWidth(shown || def.placeholder, font);
+    const measured = textWidth(shown || def.placeholder, canvasFont(getComputedStyle(input)));
     setWidth(Math.ceil(measured + 18));
   }, [shown, def.placeholder, editing]);
 
@@ -62,17 +67,15 @@ export function BlankInput({ blankKey }: { blankKey: string }) {
     }
   }
 
+  /** Words in the blank that haven't been read yet. Words the idle pause already read aren't read (and logged) twice. */
+  const unread = (): string | null => (text !== null && text !== display && text !== (blank?.raw ?? "") ? text : null);
+
   function onChange(event: ChangeEvent<HTMLInputElement>) {
     const raw = event.target.value;
-    const native = event.nativeEvent as InputEvent;
     const grew = raw.length - (text ?? display).length;
-    const burst =
-      native.inputType === "insertFromPaste" ||
-      native.inputType === "insertFromDrop" ||
-      (Date.now() - lastKeyAt.current > KEY_GAP_MS && grew > 1);
     setText(raw);
     window.clearTimeout(idle.current);
-    if (burst) read(raw, true);
+    if (isBurst(event.nativeEvent as InputEvent, grew, lastKeyAt.current)) read(raw, true);
     else idle.current = window.setTimeout(() => read(raw, false), IDLE_MS);
   }
 
@@ -80,76 +83,101 @@ export function BlankInput({ blankKey }: { blankKey: string }) {
     lastKeyAt.current = Date.now();
     if (event.key === "Enter") {
       event.preventDefault();
-      if (text !== null) read(text, true);
+      const pending = unread();
+      if (pending !== null) read(pending, true);
+      else if (text !== null && readable) {
+        setText(null);
+        setInked((n) => n + 1);
+      }
     } else if (event.key === "Escape") {
       setText(null);
       window.clearTimeout(idle.current);
+    } else if (event.key === "ArrowDown" && event.altKey) {
+      event.preventDefault();
+      const pending = unread();
+      if (pending !== null) read(pending, true);
+      dispatch({ type: "heard", key: blankKey });
     }
   }
 
   function onBlur() {
     window.clearTimeout(idle.current);
-    if (text !== null && text !== display) read(text, true);
+    const pending = unread();
+    if (pending !== null) read(pending, true);
     setText(null);
     if (state.focused === blankKey) dispatch({ type: "focus", key: null });
   }
 
+  // Changes to a field's description aren't spoken, so a blank that couldn't be read says so here.
+  const announcement = (
+    <span className="sr-only" aria-live="polite">
+      {failed ? `${def.label}: ${blank.note ?? ""}` : ""}
+    </span>
+  );
+
   if (!editing) {
     const empty = !shown;
     return (
-      <span
-        role="textbox"
-        tabIndex={0}
-        id={ids.input}
-        aria-label={def.label}
-        aria-invalid={failed || !!problem || undefined}
-        aria-describedby={failed || problem ? ids.note : undefined}
-        data-blank={blankKey}
-        onFocus={() => dispatch({ type: "focus", key: blankKey })}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          dispatch({ type: "focus", key: blankKey });
-        }}
-        className={[
-          "cursor-text rounded-xs px-0.5 outline-offset-2 [box-decoration-break:clone]",
-          empty
-            ? "italic text-ink-soft underline decoration-dotted decoration-[color-mix(in_srgb,var(--ink)_45%,transparent)] underline-offset-[0.28em] text-[0.92em]"
-            : failed
-              ? "text-ink underline decoration-wavy decoration-bahi underline-offset-[0.22em]"
-              : "text-ink underline decoration-dotted decoration-[color-mix(in_srgb,var(--gold)_70%,transparent)] underline-offset-[0.3em]",
-          problem && empty ? "decoration-bahi" : "",
-        ].join(" ")}
-      >
-        <span key={inked} className={inked ? "ink-in" : undefined}>
-          {empty ? def.placeholder : shown}
+      <>
+        <span
+          role="textbox"
+          tabIndex={0}
+          id={ids.input}
+          aria-label={def.label}
+          aria-invalid={failed || !!problem || undefined}
+          aria-describedby={failed || problem ? ids.note : undefined}
+          data-blank={blankKey}
+          onFocus={() => dispatch({ type: "focus", key: blankKey })}
+          onMouseDown={(e) => {
+            e.preventDefault();
+            dispatch({ type: "focus", key: blankKey });
+          }}
+          className={[
+            "cursor-text rounded-xs px-0.5 outline-offset-2 [box-decoration-break:clone]",
+            empty
+              ? "italic text-ink-soft underline decoration-dotted decoration-[color-mix(in_srgb,var(--ink)_45%,transparent)] underline-offset-[0.28em] text-[0.92em]"
+              : failed
+                ? "text-ink underline decoration-wavy decoration-bahi underline-offset-[0.22em]"
+                : "text-ink underline decoration-dotted decoration-[color-mix(in_srgb,var(--gold)_70%,transparent)] underline-offset-[0.3em]",
+            problem && empty ? "decoration-bahi" : "",
+          ].join(" ")}
+        >
+          <span key={inked} className={inked ? "ink-in" : undefined}>
+            {empty ? def.placeholder : shown}
+          </span>
         </span>
-      </span>
+        {announcement}
+      </>
     );
   }
 
   return (
-    <input
-      ref={inputRef}
-      id={ids.input}
-      autoFocus
-      value={shown}
-      placeholder={def.placeholder}
-      aria-label={def.label}
-      aria-invalid={failed || !!problem || undefined}
-      aria-describedby={described}
-      data-blank={blankKey}
-      autoComplete="off"
-      autoCapitalize="off"
-      spellCheck={def.kind === "work" || def.kind === "text"}
-      onFocus={(e) => e.currentTarget.select()}
-      onChange={onChange}
-      onKeyDown={onKeyDown}
-      onBlur={onBlur}
-      onPaste={() => {
-        lastKeyAt.current = 0;
-      }}
-      style={{ width: width ? `min(100%, ${width + 24}px)` : undefined }}
-      className="mx-0.5 inline-block max-w-full rounded-none border-0 border-b-2 border-bahi bg-[color-mix(in_srgb,var(--paper-deep)_55%,transparent)] px-1 py-0 align-baseline font-serif text-deed text-ink outline-2 outline-offset-2 outline-bahi transition-[width] duration-150 ease-out placeholder:italic placeholder:text-ink-soft"
-    />
+    <>
+      <input
+        ref={inputRef}
+        id={ids.input}
+        autoFocus
+        value={shown}
+        placeholder={def.placeholder}
+        aria-label={def.label}
+        aria-invalid={failed || !!problem || undefined}
+        aria-describedby={described}
+        aria-keyshortcuts={heardDiffers(blankKey, blank) ? "Alt+ArrowDown" : undefined}
+        data-blank={blankKey}
+        autoComplete="off"
+        autoCapitalize="off"
+        spellCheck={def.kind === "work" || def.kind === "text"}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={onChange}
+        onKeyDown={onKeyDown}
+        onBlur={onBlur}
+        onPaste={() => {
+          lastKeyAt.current = 0;
+        }}
+        style={{ width: width ? `min(100%, ${width + 24}px)` : undefined }}
+        className="mx-0.5 inline-block max-w-full rounded-none border-0 border-b-2 border-bahi bg-[color-mix(in_srgb,var(--paper-deep)_55%,transparent)] px-1 py-0 align-baseline font-serif text-deed text-ink outline-2 outline-offset-2 outline-bahi transition-[width] duration-150 ease-out placeholder:italic placeholder:text-ink-soft"
+      />
+      {announcement}
+    </>
   );
 }

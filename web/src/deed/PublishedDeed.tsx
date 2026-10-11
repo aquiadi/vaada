@@ -6,20 +6,9 @@ import { Struck } from "../design/Strike";
 import { formatInstantIst, formatIsoDate, istDateOf } from "../format/dates";
 import { formatRupees } from "../format/money";
 import type { Acceptance, Agreement, RegistryEntry } from "../lib/types";
-import { numberWord, type StrikableKey } from "./blanks";
+import { clauseOf, numberWord, type StrikableKey } from "./blanks";
 import { DeedBody, DeedDisclaimers, type DeedFacts, type DeedSlots } from "./DeedText";
 import { agreementSummary } from "./summary";
-
-const CLAUSE_OF: Array<[string, StrikableKey]> = [
-  ["client_organisation", "client_organisation"],
-  ["late_fee.", "late_fee"],
-  ["kill_fee.", "kill_fee"],
-  ["ip_transfer.", "ip_transfer"],
-];
-
-function clauseOf(key: string): StrikableKey | null {
-  return CLAUSE_OF.find(([prefix]) => key.startsWith(prefix))?.[1] ?? null;
-}
 
 function valueOf(a: Agreement, key: string): string {
   const m = /^milestones\.(\d+)\.(\w+)$/.exec(key);
@@ -65,13 +54,13 @@ function valueOf(a: Agreement, key: string): string {
   return "";
 }
 
-export function agreementSlots(a: Agreement, struck: readonly string[]): DeedSlots {
+function agreementSlots(a: Agreement, struck: readonly string[]): DeedSlots {
   const isStruck = (key: StrikableKey) =>
     struck.includes(key) || (key === "client_organisation" ? !a.client.organisation : a.clauses[key] === null);
   return {
     struck,
     milestoneCount: a.milestones.length,
-    margin: () => null,
+    margin: null,
     blank: (key) => {
       const clause = clauseOf(key);
       if (clause && isStruck(clause)) return <span aria-hidden="true">________</span>;
@@ -81,7 +70,7 @@ export function agreementSlots(a: Agreement, struck: readonly string[]): DeedSlo
   };
 }
 
-export function factsFromAgreement(a: Agreement): DeedFacts {
+function factsFromAgreement(a: Agreement): DeedFacts {
   return {
     madeOn: istDateOf(a.published_at),
     totalPaise: Number(a.money.total_paise),
@@ -103,13 +92,13 @@ function VerifyHash({ agreement, hash }: { agreement: Agreement; hash: string })
       >
         Verify
       </button>
-      {result ? (
-        <span role="status" className={`ml-2 text-micro ${result === "match" ? "text-stamp" : "text-bahi"}`}>
-          {result === "match"
-            ? "Matches. Your browser rebuilt the hash from the terms on this page."
-            : "Doesn't match. The terms on this page differ from the ones that were frozen."}
-        </span>
-      ) : null}
+      <span
+        role="status"
+        className={result ? `mt-1 block border-l-2 pl-2 text-micro text-ink ${result === "match" ? "border-stamp" : "border-bahi"}` : ""}
+      >
+        {result === "match" ? "Matches. Your browser rebuilt the hash from the terms on this page." : null}
+        {result === "mismatch" ? "Doesn't match. The terms on this page differ from the ones that were frozen." : null}
+      </span>
     </span>
   );
 }
@@ -173,7 +162,7 @@ export function PublishedDeed({ agreement, hash, struck, accepted, registry, com
                 <Mono className="text-ink">{agreement.nonce}</Mono>
               </dd>
             </div>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 pt-1">
+            <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 pt-1">
               <VerifyHash agreement={agreement} hash={hash} />
               <RegistryLink entry={published} />
             </div>

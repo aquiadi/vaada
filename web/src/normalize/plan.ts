@@ -1,7 +1,7 @@
 import { formatRupees } from "../format/money";
 import { toRoman } from "../format/roman";
 import { parseAmountText } from "./amount";
-import { classifyNumberWord, wholeNumber } from "./numbers";
+import { classifyNumberWord, isHalfWord, wholeNumber } from "./numbers";
 import { prepare } from "./prep";
 import { exact, failed, inferred, type Normalized } from "./types";
 
@@ -55,7 +55,6 @@ const STAGE_TITLES: Record<StageKind, string> = {
 };
 
 const REST = /\b(baaki|baki|bacha hua|bachi hui|baaki ka|rest|remaining|remainder|balance|the other half)\b/;
-const HALF = /^(aadha|adha|aadhe|adhe|half|आधा)$/;
 const QUARTER = /^(chauthai|quarter|one fourth|ek chauthai|a quarter)$/;
 const THREE_QUARTERS = /^(teen chauthai|three quarters|three fourths|paun|paune)$/;
 const FILLER =
@@ -90,7 +89,7 @@ interface ShareReading {
 
 function readShare(words: string): ShareReading | undefined {
   if (!words) return undefined;
-  if (HALF.test(words)) return { share: { type: "percent", bps: 5000 }, bareNumber: false };
+  if (isHalfWord(words)) return { share: { type: "percent", bps: 5000 }, bareNumber: false };
   if (QUARTER.test(words)) return { share: { type: "percent", bps: 2500 }, bareNumber: false };
   if (THREE_QUARTERS.test(words)) return { share: { type: "percent", bps: 7500 }, bareNumber: false };
   const bps = percentBps(words);
@@ -104,7 +103,7 @@ function readShare(words: string): ShareReading | undefined {
 
 function isShareStart(word: string): boolean {
   if (/^\d/.test(word) || /^₹/.test(word)) return true;
-  if (HALF.test(word) || REST.test(word) || QUARTER.test(word)) return true;
+  if (isHalfWord(word) || REST.test(word) || QUARTER.test(word)) return true;
   const token = classifyNumberWord(word);
   return token?.kind === "number" || token?.kind === "adjust" || token?.kind === "half";
 }

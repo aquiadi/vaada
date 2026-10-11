@@ -6,7 +6,9 @@ export type RevisionCount = number | "unlimited";
 
 export const COUNT_UNREADABLE = "Couldn't read a number here. Try 'teen' or '3'.";
 export const UNLIMITED_NOTE = "Unlimited revisions is how freelancers get stuck. Sure?";
+/** The API's cap on revision rounds; a bigger number would only come back as a problem at Send. */
 const MAX_REVISIONS = 20;
+export const TOO_MANY_REVISIONS = `A deed can promise up to ${MAX_REVISIONS} rounds of revision, or unlimited. Say a smaller number.`;
 
 const UNLIMITED =
   /\b(unlimited|infinite|limitless|jitne chahiye|jitni chahiye|jitna chahiye|jitne bhi|koi limit nahi|koi limit nahin|no limit|as many as (needed|they want|you want|required)|bina limit|anant)\b/;
@@ -37,7 +39,7 @@ export function count(raw: string, opts: { unit?: "revisions" | "days" } = {}): 
   const clause = lastClause(core);
   const n = wholeNumber(core) ?? (clause ? wholeNumber(stripFiller(clause)) : undefined);
   if (n === undefined) return failed(COUNT_UNREADABLE);
-  if (n > MAX_REVISIONS) return inferred(n, `${n} revisions is a lot to promise. Sure?`);
+  if (n > MAX_REVISIONS) return failed(TOO_MANY_REVISIONS);
   return exact(n);
 }
 

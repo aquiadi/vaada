@@ -54,7 +54,8 @@ function sameSegments(a: Segment[], b: Segment[]): boolean {
 
 /**
  * Struck words stay on the page with a pen stroke through each line of them, ending where the words end, the
- * way you'd strike a clause on paper. The stroke is ink, never red.
+ * way you'd strike a clause on paper. The stroke is ink, never red. The strokes are measured from the screen's line
+ * boxes, so print hides them and strikes `.struck-words` with a text line that follows the reflowed text.
  */
 export function Struck({ seed, animate = false, children }: { seed: string; animate?: boolean; children: ReactNode }) {
   const words = useRef<HTMLSpanElement>(null);
@@ -90,7 +91,7 @@ export function Struck({ seed, animate = false, children }: { seed: string; anim
   }, [seed, segments]);
 
   return (
-    <span ref={words} className="relative text-ink-soft">
+    <span ref={words} className="struck-words relative text-ink-soft">
       <span ref={origin} aria-hidden="true" className="pointer-events-none absolute left-0 top-0 h-0 w-0" />
       <span className="sr-only">Struck out: </span>
       {children}
@@ -98,7 +99,7 @@ export function Struck({ seed, animate = false, children }: { seed: string; anim
         <svg
           key={i}
           aria-hidden="true"
-          className={`pointer-events-none absolute overflow-visible ${animate ? "strike-draw" : ""}`}
+          className={`strike-strokes pointer-events-none absolute overflow-visible ${animate ? "strike-draw" : ""}`}
           style={{ left: segment.left, top: segment.top, width: segment.width, height: segment.height, animationDelay: `${i * 70}ms` }}
           viewBox="0 0 100 10"
           preserveAspectRatio="none"

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { count, COUNT_UNREADABLE, UNLIMITED_NOTE } from "./count";
+import { count, COUNT_UNREADABLE, TOO_MANY_REVISIONS, UNLIMITED_NOTE } from "./count";
 
 describe("count: revisions", () => {
   it.each<[string, number]>([
@@ -31,6 +31,14 @@ describe("count: revisions", () => {
   it("a range reads as the higher number", () => {
     expect(count("2-3 revisions")).toMatchObject({ value: 3, confidence: "inferred" });
     expect(count("do ya teen")).toMatchObject({ value: 3, confidence: "inferred" });
+  });
+
+  it.each(["25", "pachees revisions", "21 rounds"])("%s is more than a deed can promise", (raw) => {
+    expect(count(raw)).toEqual({ value: null, confidence: "failed", note: TOO_MANY_REVISIONS });
+  });
+
+  it("twenty is the most a deed can promise", () => {
+    expect(count("bees")).toEqual({ value: 20, confidence: "exact" });
   });
 
   it.each(["kuch", "dekhte hain", ""])("%j fails", (raw) => {

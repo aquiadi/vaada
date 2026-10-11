@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { todayInKolkata } from "./calendar";
 import { date, DATE_UNREADABLE, dateLimitNote } from "./date";
 
 const ctx = { today: { y: 2026, m: 10, d: 9 }, maxDays: 120 };
@@ -103,12 +102,5 @@ describe("date: failures", () => {
 
   it("explains the limit in one plain sentence", () => {
     expect(dateLimitNote(120).split(". ").length).toBe(1);
-  });
-});
-
-describe("todayInKolkata", () => {
-  it("rolls over at midnight IST, not UTC", () => {
-    expect(todayInKolkata(new Date("2026-10-09T18:29:00Z"))).toEqual({ y: 2026, m: 10, d: 9 });
-    expect(todayInKolkata(new Date("2026-10-09T18:31:00Z"))).toEqual({ y: 2026, m: 10, d: 10 });
   });
 });

@@ -65,15 +65,3 @@ export function fromIsoDate(iso: string): CalendarDate {
   if (!isValidDate(c.y, c.m, c.d)) throw new RangeError(`Not a real date: ${iso}`);
   return c;
 }
-
-const kolkataParts = new Intl.DateTimeFormat("en-CA", {
-  timeZone: "Asia/Kolkata",
-  year: "numeric",
-  month: "2-digit",
-  day: "2-digit",
-});
-
-/** Every relative date in Vaada is read against today in India. */
-export function todayInKolkata(now: Date = new Date()): CalendarDate {
-  return fromIsoDate(kolkataParts.format(now));
-}

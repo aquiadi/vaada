@@ -35,19 +35,24 @@ export function deedNumber(deedNo: number | null | undefined): string {
  */
 export function DeedSheet({ deedNo, title, children, compact = false, className = "" }: Props) {
   const [ref, { w, h }] = useSize<HTMLDivElement>();
+  const [markRef, mark] = useSize<HTMLDivElement>();
   const narrow = compact || w < 560;
   const band = narrow ? 11 : 18;
   const inset = narrow ? 8 : 14;
   const panelWidth = narrow ? 220 : 300;
+  // Sized from the mark itself, so a larger default font or a fallback face still sits inside the double rule.
+  const panelHeight = Math.max(band * 2.6, mark.h + 2 * PANEL_CLEARANCE);
   const geometry = useMemo(
-    () => (w > 0 && h > 0 ? frameGeometry(w, h, { band, inset, panelWidth }) : null),
-    [w, h, band, inset, panelWidth],
+    () => (w > 0 && h > 0 ? frameGeometry(w, h, { band, inset, panelWidth, panelHeight }) : null),
+    [w, h, band, inset, panelWidth, panelHeight],
   );
   const rings = useMemo(
     () => (geometry?.panel ? ringPaths(w / 2, geometry.panel.y + geometry.panel.h / 2, geometry.panel.w / 2 - 8, geometry.panel.h / 2 - 3) : []),
     [geometry, w],
   );
   const pad = inset + band + (narrow ? 14 : 34);
+  const panelBottom = geometry?.panel ? geometry.panel.y + geometry.panel.h : 0;
+  const top = Math.max(pad, panelBottom) + (narrow ? 20 : 34);
 
   return (
     <div ref={ref} className={`sheet grain relative ${className}`}>
@@ -85,25 +90,33 @@ export function DeedSheet({ deedNo, title, children, compact = false, className 
           )}
         </svg>
       )}
-      {geometry?.panel && (
-        <div
-          className="absolute left-1/2 flex -translate-x-1/2 flex-col items-center justify-center text-center"
-          style={{ top: geometry.panel.y, width: geometry.panel.w, height: geometry.panel.h }}
-        >
-          <span className="label" style={{ color: "var(--stamp)", letterSpacing: "0.22em" }}>
+      <div
+        className="absolute left-1/2 flex -translate-x-1/2 items-center justify-center text-center"
+        style={{
+          top: geometry?.panel?.y ?? 0,
+          width: geometry?.panel?.w ?? panelWidth,
+          height: panelHeight,
+          visibility: geometry?.panel ? "visible" : "hidden",
+        }}
+      >
+        <div ref={markRef} className="flex flex-col items-center whitespace-nowrap">
+          <span className="label leading-[1.3]" style={{ color: "var(--stamp)", letterSpacing: "0.22em" }}>
             Vaada · <span className="deva normal-case tracking-normal">वादा</span>
           </span>
-          <span className="figures font-display text-ink" style={{ fontSize: narrow ? 15 : 19, letterSpacing: "0.08em" }}>
+          <span className="figures font-serif font-semibold leading-[1.25] text-ink" style={{ fontSize: narrow ? 14 : 16, letterSpacing: "0.12em" }}>
             {title ?? `DEED No. ${deedNumber(deedNo)}`}
           </span>
         </div>
-      )}
-      <div className="relative" style={{ padding: `${pad + (narrow ? 26 : 34)}px ${pad}px ${pad}px` }}>
+      </div>
+      <div className="relative" style={{ padding: `${top}px ${pad}px ${pad}px` }}>
         {children}
       </div>
     </div>
   );
 }
+
+/** The panel's inner rule sits 3px inside its edge; the mark keeps a little clear of it. */
+const PANEL_CLEARANCE = 7;
 
 function rect(r: { x: number; y: number; w: number; h: number }) {
   return { x: r.x, y: r.y, width: Math.max(r.w, 0), height: Math.max(r.h, 0) };

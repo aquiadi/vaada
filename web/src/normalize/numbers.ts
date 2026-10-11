@@ -111,6 +111,11 @@ const ADJUSTERS: Record<string, number> = {
 
 const HALF = new Set(["half", "aadha", "adha", "aadhaa", "aadhe", "adhe", "आधा", "आधे"]);
 
+/** "aadha", "half", "आधे": the one list of half words, for amounts and payment plans alike. */
+export function isHalfWord(word: string): boolean {
+  return HALF.has(/\p{Script=Devanagari}/u.test(word) ? devanagariKey(word) : word);
+}
+
 export function parseDecimal(s: string): number | undefined {
   const m = /^(\d+)(?:\.(\d+))?$/.exec(s);
   if (!m) return undefined;

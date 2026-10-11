@@ -30,6 +30,20 @@ describe("plan: common ways to say it", () => {
       ],
     ],
     [
+      "aadhaa advance aadhaa delivery pe",
+      [
+        ["Advance", R(12500)],
+        ["On delivery", R(12500)],
+      ],
+    ],
+    [
+      "आधे advance आधे delivery pe",
+      [
+        ["Advance", R(12500)],
+        ["On delivery", R(12500)],
+      ],
+    ],
+    [
       "half upfront half on delivery",
       [
         ["Advance", R(12500)],

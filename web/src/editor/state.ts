@@ -1,11 +1,13 @@
 import { formatRupees } from "../format/money";
 import type { Blank, Draft } from "../lib/types";
 import type { MilestoneDraft } from "../normalize";
-import { milestoneBlanks, type StrikableKey } from "../deed/blanks";
+import { blankDef, displayValue, milestoneBlanks, type StrikableKey } from "../deed/blanks";
 
 export interface EditorState {
   draft: Draft;
   focused: string | null;
+  /** The blank whose "heard" correction is open, from a click in the margin or Alt+Down in the blank. */
+  heard: string | null;
   /** Problems the API reported on the last attempt to send, keyed by blank. */
   problems: Record<string, string>;
   /** The plan couldn't be read, so the parts are set by hand. */
@@ -23,15 +25,17 @@ export type EditorAction =
   | { type: "addPart" }
   | { type: "removePart"; i: number }
   | { type: "focus"; key: string | null }
+  | { type: "heard"; key: string | null }
   | { type: "problems"; problems: Record<string, string> };
 
 export function initialState(draft: Draft): EditorState {
   const manualParts = draft.milestone_count > 0 && draft.blanks.plan?.confidence === "failed";
-  return { draft, focused: null, problems: {}, manualParts, edits: 0 };
+  return { draft, focused: null, heard: null, problems: {}, manualParts, edits: 0 };
 }
 
+/** Any change to the draft closes an open "heard" correction, since what it showed may no longer be there. */
 function withBlanks(state: EditorState, blanks: Record<string, Blank>, extra: Partial<Draft> = {}): EditorState {
-  return { ...state, draft: { ...state.draft, ...extra, blanks }, edits: state.edits + 1 };
+  return { ...state, draft: { ...state.draft, ...extra, blanks }, heard: null, edits: state.edits + 1 };
 }
 
 function planBlank(value: string | number, raw: string): Blank {
@@ -98,6 +102,8 @@ export function editorReducer(state: EditorState, action: EditorAction): EditorS
     }
     case "focus":
       return state.focused === action.key ? state : { ...state, focused: action.key };
+    case "heard":
+      return state.heard === action.key ? state : { ...state, heard: action.key };
     case "problems":
       return { ...state, problems: action.problems };
   }
@@ -116,4 +122,11 @@ export function sumProblem(draft: Draft): string | null {
   const sum = amounts.reduce((a, b) => a + b, 0);
   if (sum === total) return null;
   return `The parts add up to ${formatRupees(sum)} (${amounts.map(formatRupees).join(" + ")}), but the total is ${formatRupees(total)}.`;
+}
+
+/** The margin shows the words that were heard when they differ from what the blank now says. */
+export function heardDiffers(key: string, blank: Blank | undefined): boolean {
+  if (!blank || blank.source === "plan" || blank.value === null || blank.value === undefined) return false;
+  if (blank.confidence === "failed" && blank.raw.trim()) return false;
+  return blank.raw.trim() !== displayValue(blankDef(key).kind, blank.value);
 }
