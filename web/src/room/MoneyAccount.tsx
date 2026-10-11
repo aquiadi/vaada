@@ -1,11 +1,12 @@
+import type { ReactNode } from "react";
 import { Rupees } from "../components/ui";
 import { formatInstantIst } from "../format/dates";
 import type { Room } from "../lib/types";
-import { firstName, moneyStanding } from "./words";
+import { firstName, type MoneyStanding, moneyStanding } from "./words";
 
 const METHOD_NAMES: Record<string, string> = { upi: "UPI", netbanking: "netbanking", card: "card" };
 
-function Row({ label, note, paise, total = false }: { label: string; note?: string; paise: number; total?: boolean }) {
+function Row({ label, note, paise, total = false }: { label: string; note?: ReactNode; paise: number; total?: boolean }) {
   return (
     <tr className={total ? "border-y border-ink" : "border-b hairline"}>
       <th scope="row" className={`py-2 pr-4 text-left align-top text-ink ${total ? "font-semibold" : "font-normal"}`}>
@@ -19,6 +20,18 @@ function Row({ label, note, paise, total = false }: { label: string; note?: stri
   );
 }
 
+/** The release row stays gross so the rows add up to the deal total; the Maker also sees what reaches their bank. */
+function releaseNote(room: Room, standing: MoneyStanding): ReactNode {
+  if (room.role !== "maker") return undefined;
+  const account = room.bank_last4 ? `your bank account ending ${room.bank_last4}` : "your bank account";
+  if (standing.toMakerPaise === standing.releasedPaise) return `To ${account}.`;
+  return (
+    <>
+      <Rupees paise={standing.toMakerPaise} /> of it goes to {account}, after Vaada’s fee and any tax withheld.
+    </>
+  );
+}
+
 /** The money on the deed, the way an account book would set it out: what was owed, what was paid, where it is now. */
 export function MoneyAccount({ room }: { room: Room }) {
   const standing = moneyStanding(room);
@@ -28,7 +41,6 @@ export function MoneyAccount({ room }: { room: Room }) {
   const paidNote = payment?.captured_at
     ? `On ${formatInstantIst(payment.captured_at)}${payment.method ? `, by ${METHOD_NAMES[payment.method] ?? payment.method}` : ""}.`
     : undefined;
-  const releaseNote = room.role === "maker" && room.bank_last4 ? `To your bank account ending ${room.bank_last4}.` : undefined;
   const anyStanding = standing.heldPaise + standing.releasedPaise + standing.refundedPaise + standing.unpaidPaise > 0;
 
   return (
@@ -56,12 +68,12 @@ export function MoneyAccount({ room }: { room: Room }) {
         {anyStanding ? (
           <tbody>
             <tr>
-              <th colSpan={2} scope="colgroup" className="label pb-1 pt-6 text-left font-medium">
+              <th colSpan={2} scope="rowgroup" className="label pb-1 pt-6 text-left font-medium">
                 Where the deal total stands
               </th>
             </tr>
             {standing.heldPaise > 0 ? <Row label="Held by Razorpay" paise={standing.heldPaise} /> : null}
-            {standing.releasedPaise > 0 ? <Row label="Released for the next settlement" note={releaseNote} paise={standing.releasedPaise} /> : null}
+            {standing.releasedPaise > 0 ? <Row label="Released for the next settlement" note={releaseNote(room, standing)} paise={standing.releasedPaise} /> : null}
             {standing.refundedPaise > 0 ? <Row label={`Refunded to ${payer}`} paise={standing.refundedPaise} /> : null}
             {standing.unpaidPaise > 0 ? <Row label="Not yet paid" paise={standing.unpaidPaise} /> : null}
           </tbody>

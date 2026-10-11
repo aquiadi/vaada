@@ -147,6 +147,7 @@ async def queue(ctx: Ctx, admin: AdminUser) -> dict[str, Any]:
                 "id": str(f.id),
                 "deal_id": str(d.id),
                 "deed_no": deed_number(d.deed_no),
+                "milestone_id": str(f.milestone_id) if f.milestone_id else None,
                 "kind": f.kind.value,
                 "summary": f.summary,
                 "first_seen_at": iso(f.first_seen_at),

@@ -84,10 +84,11 @@ export function dealStanding(room: Room): string {
   }
 }
 
-
 export interface MoneyStanding {
   heldPaise: number;
   releasedPaise: number;
+  /** What the released parts send to the Maker's bank, after Vaada's fee and any tax withheld. */
+  toMakerPaise: number;
   refundedPaise: number;
   unpaidPaise: number;
 }
@@ -95,14 +96,21 @@ export interface MoneyStanding {
 /** Where the deal total stands, counted on milestone amounts so the parts add back up to the total. */
 export function moneyStanding(room: Room): MoneyStanding {
   const open = room.status !== "lapsed" && room.status !== "cancelled";
-  const standing: MoneyStanding = { heldPaise: 0, releasedPaise: 0, refundedPaise: 0, unpaidPaise: 0 };
+  const standing: MoneyStanding = { heldPaise: 0, releasedPaise: 0, toMakerPaise: 0, refundedPaise: 0, unpaidPaise: 0 };
   for (const m of room.milestones) {
     standing.refundedPaise += m.refund_paise;
-    if (m.released_at) standing.releasedPaise += m.amount_paise - Math.min(m.refund_paise, m.amount_paise);
-    else if (HELD.has(m.status)) standing.heldPaise += m.amount_paise;
+    if (m.released_at) {
+      standing.releasedPaise += m.amount_paise - Math.min(m.refund_paise, m.amount_paise);
+      standing.toMakerPaise += m.transfer_paise - Math.min(m.refund_paise, m.transfer_paise);
+    } else if (HELD.has(m.status)) standing.heldPaise += m.amount_paise;
     else if (m.status === "unfunded" && open) standing.unpaidPaise += m.amount_paise;
   }
   return standing;
+}
+
+/** What Razorpay still holds of a paid deed: every part not yet released, refunded or cancelled. */
+export function heldPaise(milestones: ReadonlyArray<{ amount_paise: number; status: MilestoneStatus }>): number {
+  return milestones.reduce((sum, m) => (HELD.has(m.status) ? sum + m.amount_paise : sum), 0);
 }
 
 /** True while something the page shows is still being confirmed by Razorpay or the chain. */

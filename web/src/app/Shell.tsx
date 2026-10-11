@@ -1,9 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-import { Link, NavLink, Outlet, useLocation } from "react-router";
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink, Outlet, useLocation, useMatches } from "react-router";
 import { api } from "../lib/api";
 import { personaSession, setPersonaSession, signOut } from "../lib/auth";
 import { useConfig } from "../lib/config";
+import { explain } from "../lib/errors";
 import { useAuthVersion, useMe } from "../lib/session";
 import { applyTheme, currentTheme, type Theme } from "../lib/theme";
 
@@ -12,7 +13,7 @@ export function Wordmark({ size = "md" }: { size?: "md" | "lg" }) {
   return (
     <span className="inline-flex items-baseline gap-2 text-ink">
       <span className={`font-display font-medium tracking-[0.01em] ${large ? "text-mark" : "text-[1.75rem] leading-none"}`}>Vaada</span>
-      <span className={`deva ${large ? "text-h2" : "text-[1.125rem]"} text-bahi`} lang="hi">
+      <span className={`deva ${large ? "text-h2" : "text-[1.125rem]"} text-ink-soft`} lang="hi">
         वादा
       </span>
     </span>
@@ -31,7 +32,7 @@ function DemoBand() {
 function Masthead() {
   const { data: me } = useMe();
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `smallcaps text-ui no-underline py-1 border-b ${isActive ? "border-bahi text-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
+    `smallcaps text-ui no-underline py-1 border-b ${isActive ? "border-ink text-ink" : "border-transparent text-ink-soft hover:text-ink"}`;
   return (
     <header className="no-print border-b hairline bg-paper-deep">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6">
@@ -87,7 +88,7 @@ function ThemeToggle() {
               applyTheme(choice);
               setTheme(choice);
             }}
-            className="accent-[var(--bahi)]"
+            className="accent-[var(--ink)]"
           />
           {choice === "system" ? "Match device" : choice}
         </label>
@@ -146,7 +147,7 @@ function PersonaSlip({ devTools }: { devTools: boolean }) {
     api
       .get<{ personas: Persona[] }>("/dev/personas")
       .then((r) => setPersonas(r.personas))
-      .catch(() => setError("Personas aren't available. Run make seed."));
+      .catch((caught: unknown) => setError(explain(caught, "The personas didn't load. The browser console has the details.")));
   }, [open, personas.length]);
 
   async function become(persona: Persona | null) {
@@ -157,8 +158,8 @@ function PersonaSlip({ devTools }: { devTools: boolean }) {
       try {
         const session = await api.post<{ access_token: string; name: string; email: string }>(`/dev/personas/${persona.key}/token`);
         setPersonaSession({ token: session.access_token, name: session.name, email: session.email });
-      } catch {
-        setError("That persona isn't seeded yet. Run make seed.");
+      } catch (caught) {
+        setError(explain(caught, `Couldn't become ${persona.name}. The browser console has the details.`));
         return;
       }
     }
@@ -167,8 +168,14 @@ function PersonaSlip({ devTools }: { devTools: boolean }) {
   }
 
   async function advance(days: number) {
-    await api.post("/dev/clock/advance", { days });
-    await api.post("/dev/tick");
+    setError(null);
+    try {
+      await api.post("/dev/clock/advance", { days });
+      await api.post("/dev/tick");
+    } catch (caught) {
+      setError(explain(caught, "Letting time pass didn't finish. The browser console has the details."));
+      return;
+    }
     await client.invalidateQueries();
   }
 
@@ -181,7 +188,7 @@ function PersonaSlip({ devTools }: { devTools: boolean }) {
             {personas.map((p) => (
               <li key={p.key}>
                 <button type="button" onClick={() => void become(p)} className="w-full cursor-pointer border-0 bg-transparent p-1 text-left hover:bg-paper-deep" aria-current={current?.email === p.email}>
-                  <span className={current?.email === p.email ? "text-bahi" : "text-ink"}>{p.name}</span>
+                  <span className={`text-ink ${current?.email === p.email ? "font-semibold" : ""}`}>{p.name}</span>
                   <span className="block text-micro text-ink-soft">{p.about}</span>
                 </button>
               </li>
@@ -207,7 +214,11 @@ function PersonaSlip({ devTools }: { devTools: boolean }) {
               </div>
             </div>
           ) : null}
-          {error ? <p className="m-0 mt-2 text-micro text-bahi">{error}</p> : null}
+          {error ? (
+            <p role="alert" className="m-0 mt-2 border-l-2 border-bahi pl-2 text-micro text-ink">
+              {error}
+            </p>
+          ) : null}
           <button type="button" onClick={() => setOpen(false)} className="smallcaps mt-2 cursor-pointer border-0 bg-transparent p-0 text-micro text-ink-soft">
             Close
           </button>
@@ -221,6 +232,46 @@ function PersonaSlip({ devTools }: { devTools: boolean }) {
   );
 }
 
+/** Set on a route in main.tsx; a page with something more specific to say renders its own <title>, which wins. */
+export interface RouteHandle {
+  title: string;
+}
+
+function PageTitle() {
+  const matches = useMatches();
+  const handle = matches.at(-1)?.handle as RouteHandle | undefined;
+  return <title>{handle ? `${handle.title} · Vaada` : "Vaada · वादा"}</title>;
+}
+
+/** Browsers say nothing when a single-page app changes page, so the new page's title is read out here. */
+function RouteAnnouncer() {
+  const { pathname } = useLocation();
+  const [message, setMessage] = useState("");
+  const announced = useRef(pathname);
+  useEffect(() => {
+    if (announced.current === pathname) return;
+    announced.current = pathname;
+    // Pages name themselves once their data arrives, so the title is read when it has stopped changing.
+    let timer = 0;
+    const settle = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(() => setMessage(document.title), 400);
+    };
+    const observer = new MutationObserver(settle);
+    observer.observe(document.head, { childList: true, subtree: true, characterData: true });
+    settle();
+    return () => {
+      observer.disconnect();
+      window.clearTimeout(timer);
+    };
+  }, [pathname]);
+  return (
+    <p role="status" className="sr-only">
+      {message}
+    </p>
+  );
+}
+
 export function Shell() {
   const { data: config } = useConfig();
   useAuthVersion();
@@ -230,6 +281,8 @@ export function Shell() {
   }, [location.pathname]);
   return (
     <div className={`flex min-h-dvh flex-col ${config?.persona_switcher ? "pb-14" : ""}`}>
+      <PageTitle />
+      <RouteAnnouncer />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:bg-paper focus:p-2">
         Skip to the page
       </a>

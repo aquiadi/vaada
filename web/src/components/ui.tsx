@@ -12,16 +12,28 @@ const TONES: Record<Tone, string> = {
   quiet: "bg-transparent text-ink border border-transparent underline decoration-[color-mix(in_srgb,var(--ink)_35%,transparent)] hover:decoration-ink",
 };
 
+/**
+ * A busy button stays focusable (aria-disabled, clicks ignored) rather than natively disabled: Chrome drops focus
+ * from a button that becomes disabled, which would throw a keyboard user back to the top of the page on every save.
+ */
 export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLButtonElement> & { tone?: Tone; busy?: boolean }>(
-  function Button({ tone = "primary", busy = false, className = "", children, disabled, ...rest }, ref) {
+  function Button({ tone = "primary", busy = false, className = "", children, disabled, onClick, ...rest }, ref) {
     return (
       <button
         ref={ref}
         type="button"
         {...rest}
-        disabled={disabled || busy}
+        disabled={disabled}
+        aria-disabled={busy || undefined}
         aria-busy={busy || undefined}
-        className={`smallcaps inline-flex min-h-10 items-center justify-center gap-2 rounded-sm px-4 py-2 text-ui transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-55 ${TONES[tone]} ${className}`}
+        onClick={(event) => {
+          if (busy) {
+            event.preventDefault();
+            return;
+          }
+          onClick?.(event);
+        }}
+        className={`smallcaps inline-flex min-h-10 items-center justify-center gap-2 rounded-sm px-4 py-2 text-ui transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-55 aria-busy:cursor-progress aria-busy:opacity-55 ${TONES[tone]} ${className}`}
       >
         {busy ? <span aria-hidden="true">…</span> : null}
         {children}
@@ -75,10 +87,10 @@ export const Field = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
           aria-invalid={error ? true : undefined}
           aria-describedby={describedBy}
           {...rest}
-          className={`w-full rounded-none border-0 border-b bg-transparent px-0 py-1.5 font-serif text-body text-ink outline-none transition-colors duration-150 placeholder:text-ink-soft/70 focus:border-bahi focus-visible:outline-none ${error ? "border-bahi" : "border-[color-mix(in_srgb,var(--ink)_35%,transparent)]"}`}
+          className={`w-full rounded-none border-0 border-b bg-transparent px-0 py-1.5 font-serif text-body text-ink transition-colors duration-150 placeholder:text-ink-soft/70 focus:border-b-2 focus:border-bahi focus:pb-[5px] ${error ? "border-bahi" : "border-[color-mix(in_srgb,var(--ink)_35%,transparent)]"}`}
         />
         {error ? (
-          <p id={`${inputId}-error`} className="m-0 border-l-2 border-bahi pl-2 text-note text-ink">
+          <p id={`${inputId}-error`} role="alert" className="m-0 border-l-2 border-bahi pl-2 text-note text-ink">
             {error}
           </p>
         ) : hint ? (
@@ -90,6 +102,9 @@ export const Field = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
     );
   },
 );
+
+/** A ref callback for something that should take focus as it appears, such as the heading of a step just reached. */
+export const focusOnMount = (element: HTMLElement | null) => element?.focus();
 
 export function SectionMark({ n, title, id }: { n: number | string; title: string; id?: string }) {
   return (

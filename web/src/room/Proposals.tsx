@@ -4,7 +4,8 @@ import { Button, Notice } from "../components/ui";
 import { numberWord } from "../deed/blanks";
 import { formatInstantIst } from "../format/dates";
 import { toRoman } from "../format/roman";
-import { ApiError, api } from "../lib/api";
+import { api } from "../lib/api";
+import { explain } from "../lib/errors";
 import type { Room } from "../lib/types";
 import { dayOf, firstName, otherParty, partyName, sentenceCase } from "./words";
 
@@ -22,7 +23,7 @@ function PlainRequest({ label, send, refresh }: { label: string; send: () => Pro
       await send();
       await refresh();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "That didn't go through. Nothing has changed; try again.");
+      setError(explain(caught, "We couldn’t confirm that went through. Reload the page to see where it stands before you try again."));
     } finally {
       setBusy(false);
     }

@@ -1,4 +1,4 @@
-import { formatCalendarDate } from "../format/dates";
+import { formatCalendarDate, ordinal } from "../format/dates";
 import { fromRoman, toRoman } from "../format/roman";
 import { addDays, type CalendarDate, compareDates, daysBetween, fromIsoDate, toIsoDate } from "../normalize/calendar";
 import { date, DATE_UNREADABLE, dateLimitNote } from "../normalize/date";
@@ -353,11 +353,6 @@ function newDate(words: string, idx: number | null, ctx: InterpretContext, shift
     return { iso: null, shiftDays: shift, remark: "Pick the milestone, and the new date is worked out from its due date." };
   }
   return shiftedDue(ctx, idx, shift);
-}
-
-function ordinal(n: number): string {
-  const suffix = n % 100 >= 11 && n % 100 <= 13 ? "th" : ({ 1: "st", 2: "nd", 3: "rd" } as Record<number, string>)[n % 10] ?? "th";
-  return `${n}${suffix}`;
 }
 
 function overLimit(nth: number, allowed: number): string {

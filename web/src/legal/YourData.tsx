@@ -2,8 +2,9 @@ import { useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { Button, Notice } from "../components/ui";
-import { ApiError, api, download } from "../lib/api";
+import { api, download } from "../lib/api";
 import { signOut } from "../lib/auth";
+import { explain } from "../lib/errors";
 import { useMe } from "../lib/session";
 
 const SIGN_IN_HERE = `/login?next=${encodeURIComponent("/legal/privacy#your-data")}`;
@@ -12,8 +13,8 @@ function DeletionEffect() {
   return (
     <div className="space-y-3">
       <p>
-        Your email address, phone number, name and handle are removed, your maker id is unlinked from you, and your unsent drafts and
-        dictations are deleted. You are signed out. This can’t be undone.
+        Your email address, phone number, name and handle are removed, along with your sign-in record and the letters we sent you. Your
+        maker id is unlinked from you, and your unsent drafts and dictations are deleted. You are signed out. This can’t be undone.
       </p>
       <p className="text-note text-ink-soft">
         What stays: deeds you sent or accepted, exactly as they were written; the record of each acceptance; and the ledger and
@@ -48,8 +49,7 @@ export function YourData() {
     try {
       await download("/me/export", "vaada-export.json");
     } catch (error) {
-      console.warn("export download failed", error);
-      setDownloadError(error instanceof ApiError ? error.message : "That download didn’t work. Check your connection and try again.");
+      setDownloadError(explain(error, "That download didn’t work. Check your connection and try again."));
     } finally {
       setDownloading(false);
     }
@@ -87,8 +87,10 @@ export function YourData() {
       </div>
       {downloadError ? <Notice tone="error">{downloadError}</Notice> : null}
       <p className="text-note text-ink-soft">
-        The download is a JSON file: your profile, payout details, deeds and their parts, acceptances, ledger, register, dictations,
-        updates, disputes and cancellations.
+        The download is a JSON file. It holds your own data: your profile and payout details, your acceptances, dictations and
+        voice updates, the payments you made and the ledger of the deeds you wrote. It holds each deed you are party to as both of you see
+        it, with its parts, register, disputes and cancellations. It leaves out the other party’s acceptance details and the
+        Maker’s working draft of a deed sent to you.
       </p>
     </div>
   );

@@ -5,17 +5,16 @@ import { Button, Notice } from "../components/ui";
 import { Struck } from "../design/Strike";
 import { formatInstantIst, formatIsoDate, istDateOf } from "../format/dates";
 import { toRoman } from "../format/roman";
-import { ApiError, api } from "../lib/api";
+import { isBurst, IDLE_MS } from "../editor/dictation";
+import { api } from "../lib/api";
 import { useConfig } from "../lib/config";
+import { explain } from "../lib/errors";
 import { flowHint } from "../lib/platform";
 import type { Room } from "../lib/types";
 import { daysBetween, fromIsoDate } from "../normalize/calendar";
 import { type InterpretContext, interpret, type Proposal, type ProposedAction, withMilestone } from "../voice/interpret";
 import { dayOf, firstName, otherParty } from "./words";
 
-const IDLE_MS = 400;
-/** Keystrokes arrive one character at a time; anything bigger with no key behind it came in one burst. */
-const KEY_GAP_MS = 80;
 /** The API takes at most this many actions in one update. */
 const MOST_ACTIONS = 12;
 const RECENT = 5;
@@ -325,11 +324,7 @@ export function VoiceUpdates({ room, onChanged }: { room: Room; onChanged: () =>
 
   function onChange(event: ChangeEvent<HTMLTextAreaElement>) {
     const next = event.target.value;
-    const native = event.nativeEvent as InputEvent;
-    const burst =
-      native.inputType === "insertFromPaste" ||
-      native.inputType === "insertFromDrop" ||
-      (Date.now() - lastKeyAt.current > KEY_GAP_MS && next.length - text.length > 1);
+    const burst = isBurst(event.nativeEvent as InputEvent, next.length - text.length, lastKeyAt.current);
     setText(next);
     setResults(null);
     setError(null);
@@ -372,12 +367,16 @@ export function VoiceUpdates({ room, onChanged }: { room: Room; onChanged: () =>
         return picked === undefined ? [] : [[i, picked]];
       }),
     );
-    const response = await api.post<{ results: string[] }>(`/voice-updates/${id}/apply`, { indexes: chosen, milestone_for: milestoneFor });
-    clear();
-    setResults(response.results);
-    onChanged();
-    // The button that was pressed is gone with its slips; the blank is where the next update starts.
-    window.requestAnimationFrame(() => blank.current?.focus());
+    try {
+      const response = await api.post<{ results: string[] }>(`/voice-updates/${id}/apply`, { indexes: chosen, milestone_for: milestoneFor });
+      clear();
+      setResults(response.results);
+      // The button that was pressed is gone with its slips; the blank is where the next update starts.
+      window.requestAnimationFrame(() => blank.current?.focus());
+    } finally {
+      // Each action is committed as it is applied, so one that fails part way leaves the earlier ones done.
+      onChanged();
+    }
   }
 
   async function applyWithoutMoney() {
@@ -386,8 +385,7 @@ export function VoiceUpdates({ room, onChanged }: { room: Room; onChanged: () =>
     try {
       await apply();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "That didn't go through. Check the register before you try again.");
-      if (!(caught instanceof ApiError)) console.error("voice update not applied", caught);
+      setError(explain(caught, "That may not all have gone through. Check the register before you try again."));
     } finally {
       setBusy(false);
     }
@@ -437,7 +435,7 @@ export function VoiceUpdates({ room, onChanged }: { room: Room; onChanged: () =>
             spellCheck
             aria-describedby={hintId}
             placeholder="Milestone do ho gaya, final files Drive pe daal di…"
-            className="block min-h-[4.5rem] w-full resize-none rounded-none border-0 border-b border-[color-mix(in_srgb,var(--ink)_45%,transparent)] bg-transparent px-0 py-1.5 font-serif text-deed text-ink outline-none transition-colors duration-150 ease-out [field-sizing:content] placeholder:italic placeholder:text-ink-soft focus:border-bahi focus-visible:outline-none"
+            className="block min-h-[4.5rem] w-full resize-none rounded-none border-0 border-b border-[color-mix(in_srgb,var(--ink)_45%,transparent)] bg-transparent px-0 py-1.5 font-serif text-deed text-ink transition-colors duration-150 ease-out [field-sizing:content] placeholder:italic placeholder:text-ink-soft focus:border-bahi"
           />
           <p
             id={hintId}

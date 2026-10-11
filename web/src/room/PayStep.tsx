@@ -1,20 +1,13 @@
-import { useState } from "react";
-import { Button, Notice } from "../components/ui";
+import { useRef, useState } from "react";
+import { Button, focusOnMount, Notice } from "../components/ui";
 import { formatRupees } from "../format/money";
-import { ApiError, api } from "../lib/api";
+import { api } from "../lib/api";
 import { useConfig } from "../lib/config";
+import { explain } from "../lib/errors";
 import type { CheckoutOrder, PublicDeed } from "../lib/types";
 import { FakeCheckout } from "./FakeCheckout";
 import { loadRazorpay, openCheckout, type CheckoutFields } from "./razorpay";
 import { dayOf, firstName } from "./words";
-
-const focusOnMount = (element: HTMLElement | null) => element?.focus();
-
-function explain(error: unknown, fallback: string): string {
-  if (error instanceof ApiError) return error.message;
-  console.warn("payment step failed", error);
-  return fallback;
-}
 
 interface Props {
   deed: PublicDeed;
@@ -30,12 +23,24 @@ export function PayStep({ deed, takeFocus, awaitingCapture, onReturned }: Props)
   const [opening, setOpening] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fakeOrder, setFakeOrder] = useState<CheckoutOrder | null>(null);
+  const [unconfirmed, setUnconfirmed] = useState(false);
+  const payButton = useRef<HTMLButtonElement>(null);
   const maker = firstName(deed.maker.name);
 
+  /**
+   * Checkout has taken the money by now, and Razorpay's capture webhook is what confirms it, so the page waits
+   * for that even when telling the API fails. Offering the Pay button again would invite a second payment.
+   */
   async function returnFromCheckout(fields: CheckoutFields) {
-    await api.post(`/public/deeds/${deed.slug}/checkout-return`, fields);
     setFakeOrder(null);
+    setError(null);
     onReturned();
+    try {
+      await api.post(`/public/deeds/${deed.slug}/checkout-return`, fields);
+    } catch (caught) {
+      console.warn("checkout return not recorded; waiting for Razorpay's capture webhook", caught);
+      setUnconfirmed(true);
+    }
   }
 
   async function startPayment() {
@@ -47,11 +52,7 @@ export function PayStep({ deed, takeFocus, awaitingCapture, onReturned }: Props)
         setFakeOrder(order);
       } else {
         openCheckout(await loadRazorpay(), order.options, {
-          onPaid: (fields) => {
-            returnFromCheckout(fields).catch((caught: unknown) =>
-              setError(explain(caught, "Razorpay took the payment, but we couldn’t confirm it from here. It will show on this page within a few minutes.")),
-            );
-          },
+          onPaid: (fields) => void returnFromCheckout(fields),
           onFailed: (description) =>
             setError(`The last attempt didn’t go through (${description.replace(/\.$/, "")}). Nothing was taken; you can try again.`),
         });
@@ -75,12 +76,14 @@ export function PayStep({ deed, takeFocus, awaitingCapture, onReturned }: Props)
       {awaitingCapture ? (
         <Notice tone="ok">
           <p ref={focusOnMount} tabIndex={-1} className="m-0 focus:outline-none">
-            We have your payment. Razorpay is confirming it now; this page updates by itself.
+            {unconfirmed
+              ? "Razorpay has your payment. We couldn’t confirm it from here, so it may take a few minutes to show. This page updates by itself; there’s no need to pay again."
+              : "We have your payment. Razorpay is confirming it now; this page updates by itself."}
           </p>
         </Notice>
       ) : (
         <div className="flex flex-col items-start gap-2">
-          <Button busy={opening} onClick={() => void startPayment()}>
+          <Button ref={payButton} busy={opening} onClick={() => void startPayment()}>
             Pay {formatRupees(deed.fees.order_paise)}
           </Button>
           <p className="m-0 text-note text-ink-soft">
@@ -96,8 +99,9 @@ export function PayStep({ deed, takeFocus, awaitingCapture, onReturned }: Props)
           key={fakeOrder.order_id}
           order={fakeOrder}
           upiLimitPaise={config?.limits.upi_limit_paise ?? null}
+          returnFocus={payButton}
           onClose={() => setFakeOrder(null)}
-          onPaid={returnFromCheckout}
+          onPaid={(fields) => void returnFromCheckout(fields)}
         />
       ) : null}
     </div>

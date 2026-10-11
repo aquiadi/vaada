@@ -1,26 +1,24 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { useNavigate, useParams } from "react-router";
-import { Button, ButtonLink, Notice, PageHeader, Waiting } from "../components/ui";
+import { type ReactNode, useState } from "react";
+import { useParams } from "react-router";
+import { Button, ButtonLink, focusOnMount, Notice, PageHeader, Rupees, Waiting } from "../components/ui";
 import { PublishedDeed } from "../deed/PublishedDeed";
 import { deedNumber } from "../design/DeedSheet";
 import { Seal } from "../design/Seal";
-import { formatRupees } from "../format/money";
 import { ApiError, api } from "../lib/api";
 import { useConfig } from "../lib/config";
+import { explain } from "../lib/errors";
 import { useMe } from "../lib/session";
 import type { PublicDeed } from "../lib/types";
 import { Clickwrap } from "../room/Clickwrap";
 import { FeeBreakdown } from "../room/FeeBreakdown";
 import { PayStep } from "../room/PayStep";
-import { dayOf, firstName } from "../room/words";
+import { dayOf, firstName, heldPaise } from "../room/words";
 
 const PAGE = "mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10";
 const SLIP = "sheet grain mx-auto mt-10 max-w-2xl scroll-mt-6 rounded-sm p-5 sm:p-8";
 
 type Stage = "closed" | "paid" | "maker" | "accept" | "pay" | "taken";
-
-const focusOnMount = (element: HTMLElement | null) => element?.focus();
 
 function closedReason(deed: PublicDeed, now: number | null): string | null {
   const reissue = `Ask ${deed.maker.name} to re-issue it with new dates.`;
@@ -58,7 +56,7 @@ function lede(deed: PublicDeed, stage: Stage, closed: string | null): string {
     case "paid":
       return deed.status === "completed"
         ? "Paid and completed. Every part of this deed has been settled."
-        : `Paid. Razorpay holds the money and releases it to ${maker} one part at a time.`;
+        : `Paid. Razorpay releases the money to ${maker} one part at a time, as each part is delivered and approved.`;
     case "maker":
       return `This is your deed, as ${deed.client.name} sees it.`;
     case "accept":
@@ -70,21 +68,31 @@ function lede(deed: PublicDeed, stage: Stage, closed: string | null): string {
   }
 }
 
+/** Parts may already have been released or refunded, so the receipt counts what Razorpay holds now. */
+function holding(deed: PublicDeed, held: number): ReactNode {
+  const maker = firstName(deed.maker.name);
+  if (deed.status === "completed") return "Every part of this deed has been settled. The deal room keeps the full register.";
+  if (held === 0) return "Razorpay holds nothing more for this deed. The deal room shows where each part of the money went.";
+  const rest = held < deed.fees.total_paise ? " The deal room shows where the rest went." : "";
+  return (
+    <>
+      Razorpay holds <Rupees paise={held} /> and releases it to {maker} one part at a time, as each is delivered and approved.{rest}
+    </>
+  );
+}
+
 function Receipt({ deed, stamped }: { deed: PublicDeed; stamped: boolean }) {
   const completed = deed.status === "completed";
+  const held = heldPaise(deed.milestones);
   return (
     <section aria-labelledby="receipt-heading" className={SLIP}>
       <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:text-left">
         <Seal hash={deed.agreement_hash} caption="Funded" size={148} animate={stamped} />
         <div className="min-w-0">
           <h2 id="receipt-heading" ref={stamped ? focusOnMount : undefined} tabIndex={-1} className="font-display text-h3 text-ink focus:outline-none">
-            {completed ? "Paid and completed" : "Paid, and held by Razorpay"}
+            {completed ? "Paid and completed" : held > 0 ? "Paid, and held by Razorpay" : "Paid"}
           </h2>
-          <p className="m-0 mt-2 text-body text-ink">
-            {completed
-              ? "Every part of this deed has been settled. The deal room keeps the full register."
-              : `Razorpay holds ${formatRupees(deed.fees.total_paise)} and releases it to ${firstName(deed.maker.name)} one part at a time, as each is delivered and approved.`}
-          </p>
+          <p className="m-0 mt-2 text-body text-ink">{holding(deed, held)}</p>
           {deed.deal_id ? (
             <ButtonLink to={`/d/${deed.deal_id}`} className="mt-4">
               Open the deal room
@@ -93,6 +101,17 @@ function Receipt({ deed, stamped }: { deed: PublicDeed; stamped: boolean }) {
         </div>
       </div>
     </section>
+  );
+}
+
+function MeTrouble({ error, retry }: { error: Error; retry: () => void }) {
+  return (
+    <div className="flex flex-col items-start gap-3">
+      <Notice tone="error">{explain(error, "We couldn’t check who’s signed in just now.")}</Notice>
+      <Button tone="plain" onClick={retry}>
+        Try again
+      </Button>
+    </div>
   );
 }
 
@@ -119,7 +138,6 @@ function MakerNote({ deed }: { deed: PublicDeed }) {
 
 export default function ClientDeed() {
   const { slug = "" } = useParams();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { data: config } = useConfig();
   const me = useMe();
@@ -142,11 +160,19 @@ export default function ClientDeed() {
     setStampedHere(true);
   }
 
-  if (query.isPending) return <Waiting>Opening the deed.</Waiting>;
+  if (query.isPending) {
+    return (
+      <>
+        <title>A deed · Vaada</title>
+        <Waiting>Opening the deed.</Waiting>
+      </>
+    );
+  }
   if (query.isError) {
     const missing = query.error instanceof ApiError && query.error.status === 404;
     return (
       <div className={PAGE}>
+        <title>{missing ? "Deed not found · Vaada" : "A deed · Vaada"}</title>
         {missing ? (
           <PageHeader
             kicker="A deed"
@@ -155,7 +181,7 @@ export default function ClientDeed() {
           />
         ) : (
           <>
-            <Notice tone="error">{query.error instanceof ApiError ? query.error.message : "We couldn’t open this deed. Try again in a moment."}</Notice>
+            <Notice tone="error">{explain(query.error, "We couldn’t open this deed. Try again in a moment.")}</Notice>
             <Button tone="plain" className="mt-4" onClick={() => void query.refetch()}>
               Try again
             </Button>
@@ -170,8 +196,11 @@ export default function ClientDeed() {
   const stage = stageOf(deed, closed);
   const settling = stage === "accept" || stage === "pay";
 
+  const signIn = `/login?next=/a/${slug}`;
+
   return (
     <div className={PAGE}>
+      <title>{`Deed No. ${deedNumber(deed.deed_no)} · Vaada`}</title>
       <header className="mb-8">
         <p className="label m-0 mb-2">
           Deed No. <span className="figures">{deedNumber(deed.deed_no)}</span> · From {deed.maker.name}
@@ -207,6 +236,13 @@ export default function ClientDeed() {
             <PayStep deed={deed} takeFocus={justAccepted} awaitingCapture={awaitingCapture} onReturned={() => setAwaitingCapture(true)} />
           ) : me.isPending ? (
             <Waiting />
+          ) : me.isError && !me.data ? (
+            <div className="flex flex-col items-start gap-3">
+              <h2 id="accept-heading" className="font-display text-h3 text-ink">
+                Accept the deed
+              </h2>
+              <MeTrouble error={me.error} retry={() => void me.refetch()} />
+            </div>
           ) : me.data ? (
             <Clickwrap
               slug={slug}
@@ -225,7 +261,7 @@ export default function ClientDeed() {
                 Accepting is your signature, so first we need to know who you are. Sign in with your email and you’ll come straight back
                 to this page.
               </p>
-              <Button onClick={() => navigate(`/login?next=/a/${slug}`)}>Sign in to accept</Button>
+              <ButtonLink to={signIn}>Sign in to accept</ButtonLink>
             </div>
           )}
         </div>
@@ -239,10 +275,14 @@ export default function ClientDeed() {
             {deed.accepted ? `${deed.accepted.name} accepted this deed` : "This deed has been accepted"}, and only the person who accepted it can
             pay it.
           </p>
-          {me.data ? null : (
-            <Button tone="plain" className="mt-4" onClick={() => navigate(`/login?next=/a/${slug}`)}>
+          {me.data || me.isPending ? null : me.isError ? (
+            <div className="mt-4">
+              <MeTrouble error={me.error} retry={() => void me.refetch()} />
+            </div>
+          ) : (
+            <ButtonLink to={signIn} tone="plain" className="mt-4">
               Sign in, if that’s you
-            </Button>
+            </ButtonLink>
           )}
         </div>
       ) : null}

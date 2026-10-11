@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/react";
 import { lazy, StrictMode, Suspense, type ComponentType } from "react";
 import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router";
-import { Shell } from "./app/Shell";
+import { Shell, type RouteHandle } from "./app/Shell";
 import { Waiting } from "./components/ui";
 import { ApiError } from "./lib/api";
 
@@ -29,26 +29,28 @@ function page(load: () => Promise<{ default: ComponentType }>) {
   );
 }
 
+const named = (title: string): RouteHandle => ({ title });
+
 const router = createBrowserRouter([
   {
     element: <Shell />,
     children: [
       { path: "/", element: page(() => import("./routes/Home")) },
-      { path: "/login", element: page(() => import("./routes/Login")) },
-      { path: "/payouts", element: page(() => import("./routes/Payouts")) },
-      { path: "/new", element: page(() => import("./routes/NewDeed")) },
-      { path: "/new/:id", element: page(() => import("./routes/NewDeed")) },
-      { path: "/deeds", element: page(() => import("./routes/Deeds")) },
-      { path: "/d/:id", element: page(() => import("./routes/DealRoom")) },
-      { path: "/a/:slug", element: page(() => import("./routes/ClientDeed")) },
-      { path: "/ledger", element: page(() => import("./routes/Ledger")) },
-      { path: "/m/:handle", element: page(() => import("./routes/Maker")) },
-      { path: "/admin", element: page(() => import("./routes/Admin")) },
-      { path: "/legal/:doc", element: page(() => import("./routes/Legal")) },
-      { path: "/pricing", element: page(() => import("./routes/Legal")) },
-      { path: "/styleguide", element: page(() => import("./routes/Styleguide")) },
-      { path: "/dev/outbox", element: page(() => import("./routes/DevOutbox")) },
-      { path: "*", element: page(() => import("./routes/NotFound")) },
+      { path: "/login", element: page(() => import("./routes/Login")), handle: named("Sign in") },
+      { path: "/payouts", element: page(() => import("./routes/Payouts")), handle: named("Payouts") },
+      { path: "/new", element: page(() => import("./routes/NewDeed")), handle: named("New deed") },
+      { path: "/new/:id", element: page(() => import("./routes/NewDeed")), handle: named("New deed") },
+      { path: "/deeds", element: page(() => import("./routes/Deeds")), handle: named("Your deeds") },
+      { path: "/d/:id", element: page(() => import("./routes/DealRoom")), handle: named("Deal room") },
+      { path: "/a/:slug", element: page(() => import("./routes/ClientDeed")), handle: named("A deed") },
+      { path: "/ledger", element: page(() => import("./routes/Ledger")), handle: named("Your ledger") },
+      { path: "/m/:handle", element: page(() => import("./routes/Maker")), handle: named("Certificate") },
+      { path: "/admin", element: page(() => import("./routes/Admin")), handle: named("The desk") },
+      { path: "/legal/:doc", element: page(() => import("./routes/Legal")), handle: named("Policies") },
+      { path: "/pricing", element: page(() => import("./routes/Legal")), handle: named("Pricing") },
+      { path: "/styleguide", element: page(() => import("./routes/Styleguide")), handle: named("Styleguide") },
+      { path: "/dev/outbox", element: page(() => import("./routes/DevOutbox")), handle: named("Outbox") },
+      { path: "*", element: page(() => import("./routes/NotFound")), handle: named("Not found") },
     ],
   },
 ]);

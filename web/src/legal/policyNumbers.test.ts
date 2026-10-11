@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { daysInWords, hoursInWords, percentFromBps, processingFeePaise } from "./policyNumbers";
+import { processingFeePaise } from "../format/money";
+import { daysInWords, hoursInWords, percentFromBps } from "./policyNumbers";
 
 describe("percentFromBps", () => {
   it.each([

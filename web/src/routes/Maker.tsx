@@ -7,6 +7,7 @@ import { formatDeedDate, istDateOf } from "../format/dates";
 import { formatRupees, rupeesInWords } from "../format/money";
 import { toRoman } from "../format/roman";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 import { useConfig } from "../lib/config";
 import type { RegistryEntry } from "../lib/types";
 import { dayOf } from "../room/words";
@@ -33,6 +34,7 @@ interface MakerCertificate {
 }
 
 const PAGE = "mx-auto max-w-4xl px-4 py-10 sm:px-6";
+const UNOPENED_TITLE = <title>Certificate · Vaada</title>;
 
 function chainName(chainId: number): string {
   switch (chainId) {
@@ -164,11 +166,19 @@ export default function Maker() {
     queryFn: () => api.get<MakerCertificate>(`/public/makers/${encodeURIComponent(handle)}`),
   });
 
-  if (query.isPending) return <Waiting>Fetching the certificate.</Waiting>;
+  if (query.isPending) {
+    return (
+      <>
+        {UNOPENED_TITLE}
+        <Waiting>Fetching the certificate.</Waiting>
+      </>
+    );
+  }
   if (query.isError) {
     if (query.error instanceof ApiError && query.error.status === 404) {
       return (
         <div className={PAGE}>
+          <title>Certificate not found · Vaada</title>
           <PageHeader
             kicker="Certificate"
             title="No Maker at this address"
@@ -182,7 +192,8 @@ export default function Maker() {
     }
     return (
       <div className={PAGE}>
-        <Notice tone="error">{query.error instanceof ApiError ? query.error.message : "The certificate didn’t load. Try again in a moment."}</Notice>
+        {UNOPENED_TITLE}
+        <Notice tone="error">{explain(query.error, "The certificate didn’t load. Try again in a moment.")}</Notice>
         <Button tone="plain" className="mt-4" onClick={() => void query.refetch()}>
           Try again
         </Button>
@@ -191,6 +202,7 @@ export default function Maker() {
   }
   return (
     <div className={PAGE}>
+      <title>{`Certificate of ${query.data.display_name ?? query.data.handle} · Vaada`}</title>
       <Certificate maker={query.data} />
     </div>
   );

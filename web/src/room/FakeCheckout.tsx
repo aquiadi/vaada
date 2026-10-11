@@ -1,8 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { useState } from "react";
+import { type RefObject, useState } from "react";
 import { Button, Mono, Notice } from "../components/ui";
 import { formatRupees } from "../format/money";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 import type { CheckoutOrder } from "../lib/types";
 import type { CheckoutFields } from "./razorpay";
 
@@ -17,15 +18,17 @@ const METHODS: Array<[Method, string]> = [
 interface Props {
   order: CheckoutOrder;
   upiLimitPaise: number | null;
+  /** The Pay button the person opened this from; gone once they have paid. */
+  returnFocus: RefObject<HTMLButtonElement | null>;
   onClose: () => void;
-  onPaid: (fields: CheckoutFields) => Promise<void>;
+  onPaid: (fields: CheckoutFields) => void;
 }
 
 /**
  * Dev and demo stand-in for Razorpay Checkout. It looks deliberately unlike the deed and unlike Razorpay,
  * and says on its face that no money moves.
  */
-export function FakeCheckout({ order, upiLimitPaise, onClose, onPaid }: Props) {
+export function FakeCheckout({ order, upiLimitPaise, returnFocus, onClose, onPaid }: Props) {
   const [method, setMethod] = useState<Method>(order.upi_allowed ? "upi" : "netbanking");
   const [busy, setBusy] = useState<"pay" | "fail" | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -34,13 +37,12 @@ export function FakeCheckout({ order, upiLimitPaise, onClose, onPaid }: Props) {
     setBusy(succeed ? "pay" : "fail");
     setError(null);
     try {
-      const fields = await api.post<CheckoutFields>(`/dev/fake-checkout/${order.order_id}`, { method, succeed });
-      await onPaid(fields);
+      onPaid(await api.post<CheckoutFields>(`/dev/fake-checkout/${order.order_id}`, { method, succeed }));
     } catch (caught) {
       if (!succeed && caught instanceof ApiError && caught.status === 402) {
         setError("The simulated bank declined the payment. Nothing was taken; you can try again.");
       } else {
-        setError(caught instanceof ApiError ? caught.message : "The simulated payment didn't go through. Nothing was taken; try again.");
+        setError(explain(caught, "We couldn’t tell whether the simulated payment went through. Close this and reload the page to check."));
       }
     } finally {
       setBusy(null);
@@ -52,7 +54,12 @@ export function FakeCheckout({ order, upiLimitPaise, onClose, onPaid }: Props) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-[color-mix(in_srgb,var(--ink)_45%,transparent)]" />
         <Dialog.Content
-          onCloseAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => {
+            // After a payment the Pay button is gone and the waiting notice has taken focus, so focus goes back to the
+            // button only while it is still there.
+            event.preventDefault();
+            returnFocus.current?.focus();
+          }}
           className="fixed left-1/2 top-1/2 z-50 max-h-[calc(100dvh-2rem)] w-[min(27rem,calc(100vw-2rem))] -translate-x-1/2 -translate-y-1/2 overflow-y-auto rounded-sm border-2 border-dashed border-ink bg-paper-deep p-5 font-ui text-ink focus:outline-none"
         >
           <p className="label m-0">Dev and demo only</p>
@@ -120,10 +127,10 @@ export function FakeCheckout({ order, upiLimitPaise, onClose, onPaid }: Props) {
                 Close
               </Button>
             </Dialog.Close>
-            <Button tone="plain" busy={busy === "fail"} disabled={busy !== null} onClick={() => void attempt(false)}>
+            <Button tone="plain" busy={busy === "fail"} disabled={busy === "pay"} onClick={() => void attempt(false)}>
               Make it fail
             </Button>
-            <Button busy={busy === "pay"} disabled={busy !== null} onClick={() => void attempt(true)}>
+            <Button busy={busy === "pay"} disabled={busy === "fail"} onClick={() => void attempt(true)}>
               Pay {formatRupees(order.amount_paise)}
             </Button>
           </div>

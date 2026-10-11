@@ -6,6 +6,7 @@ import { PublishedDeed } from "../deed/PublishedDeed";
 import { deedNumber } from "../design/DeedSheet";
 import { Seal } from "../design/Seal";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 import type { Room } from "../lib/types";
 import { MilestoneLedger } from "../room/MilestoneLedger";
 import { MoneyAccount } from "../room/MoneyAccount";
@@ -16,11 +17,13 @@ import { VoiceUpdates } from "../room/VoiceUpdates";
 import { dealStanding, firstName, otherParty, stillSettling } from "../room/words";
 
 const PAGE = "mx-auto max-w-6xl px-4 py-10 sm:px-6";
+const UNOPENED_TITLE = <title>Deal room · Vaada</title>;
 
 function Unavailable({ id, error, retry }: { id: string; error: Error; retry: () => void }) {
   if (error instanceof ApiError && error.status === 401) {
     return (
       <div className={PAGE}>
+        {UNOPENED_TITLE}
         <PageHeader kicker="Deal room" title="Sign in to see this deal room" lede="A deal room opens only for the two people on the deed." />
         <ButtonLink to={`/login?next=/d/${id}`}>Sign in</ButtonLink>
       </div>
@@ -29,6 +32,7 @@ function Unavailable({ id, error, retry }: { id: string; error: Error; retry: ()
   if (error instanceof ApiError && error.status === 404) {
     return (
       <div className={PAGE}>
+        <title>Deal room not found · Vaada</title>
         <PageHeader
           kicker="Deal room"
           title="This deal room isn’t here"
@@ -42,7 +46,8 @@ function Unavailable({ id, error, retry }: { id: string; error: Error; retry: ()
   }
   return (
     <div className={PAGE}>
-      <Notice tone="error">{error instanceof ApiError ? error.message : "We couldn’t open this deal room. Try again in a moment."}</Notice>
+      {UNOPENED_TITLE}
+      <Notice tone="error">{explain(error, "We couldn’t open this deal room. Try again in a moment.")}</Notice>
       <Button tone="plain" className="mt-4" onClick={retry}>
         Try again
       </Button>
@@ -84,6 +89,7 @@ function RoomPage({ room, refresh }: { room: Room; refresh: () => Promise<unknow
 
   return (
     <div className={PAGE}>
+      <title>{`Deed No. ${deedNumber(room.deed_no)} · Deal room · Vaada`}</title>
       <header>
         <p className="label m-0 mb-2">
           Deed No. <span className="figures">{deedNumber(room.deed_no)}</span> · Deal room
@@ -164,7 +170,14 @@ export default function DealRoom() {
   });
   const refresh = useCallback(() => queryClient.invalidateQueries({ queryKey: ["room", id] }), [queryClient, id]);
 
-  if (query.isPending) return <Waiting>Opening the deal room.</Waiting>;
+  if (query.isPending) {
+    return (
+      <>
+        {UNOPENED_TITLE}
+        <Waiting>Opening the deal room.</Waiting>
+      </>
+    );
+  }
   if (query.isError) return <Unavailable id={id} error={query.error} retry={() => void query.refetch()} />;
   if (query.data.status === "draft") return <Navigate to={`/new/${query.data.id}`} replace />;
   return <RoomPage room={query.data} refresh={refresh} />;

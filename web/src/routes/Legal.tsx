@@ -31,6 +31,7 @@ function PolicyText({ slug }: { slug: PolicySlug }) {
 function UnknownPolicy({ path }: { path: string }) {
   return (
     <article className="measure">
+      <title>Policy not found · Vaada</title>
       <p className="label m-0 mb-2">Not found</p>
       <h1 className="font-display text-h2 leading-tight text-ink sm:text-h1">There is no policy at this address.</h1>
       <p className="mt-4 mb-0 text-lede text-ink-soft">

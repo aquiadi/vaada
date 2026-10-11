@@ -1,5 +1,5 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { DeskQueue, OpenDispute, ReconciliationFlag, StuckRefund, WebhookFailure, RegistryFailure } from "../books/desk";
 import { CELL, DeskSection, DeskTable, FIGURE_CELL } from "../books/DeskTable";
 import { DisputeDecision } from "../books/DisputeDecision";
@@ -9,9 +9,11 @@ import { formatInstantIst } from "../format/dates";
 import { formatRupees } from "../format/money";
 import { toRoman } from "../format/roman";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 import { NoteField } from "../room/NoteField";
 
 const PAGE = "mx-auto max-w-6xl px-4 py-10 sm:px-6";
+const TITLE = <title>The desk · Vaada</title>;
 
 const FLAG_KINDS: Record<string, string> = {
   drift: "Drift",
@@ -21,6 +23,7 @@ const FLAG_KINDS: Record<string, string> = {
   hold_not_confirmed: "Hold not confirmed",
   payment_on_closed_deal: "Payment on a closed deed",
   fee_exceeded: "Fee above the cap",
+  release_stuck: "Release not confirmed",
 };
 
 const REFUND_PURPOSES: Record<string, string> = {
@@ -61,6 +64,7 @@ function when(iso: string | null): string {
 function NothingHere() {
   return (
     <div className={PAGE}>
+      <title>Page not found · Vaada</title>
       <PageHeader title="Nothing here" lede="There’s no page at this address." />
       <ButtonLink to="/" tone="plain">
         Vaada’s front page
@@ -80,7 +84,14 @@ function SaidNotice({ said, section }: { said: Said | null; section: string }) {
 
 function Disputes({ disputes, onDecided }: { disputes: OpenDispute[]; onDecided: (said: string) => Promise<unknown> }) {
   const [deciding, setDeciding] = useState<string | null>(null);
+  const decideButtons = useRef(new Map<string, HTMLButtonElement>());
   const open = disputes.find((d) => d.id === deciding);
+
+  function close(id: string) {
+    setDeciding(null);
+    decideButtons.current.get(id)?.focus();
+  }
+
   return (
     <>
       <DeskTable
@@ -112,6 +123,10 @@ function Disputes({ disputes, onDecided }: { disputes: OpenDispute[]; onDecided:
             <td className={`${CELL} figures`}>{d.refund_deadline ? when(d.refund_deadline) : "No captured payment"}</td>
             <td className={CELL}>
               <Button
+                ref={(button) => {
+                  if (button) decideButtons.current.set(d.id, button);
+                  else decideButtons.current.delete(d.id);
+                }}
                 tone="plain"
                 aria-expanded={deciding === d.id}
                 aria-controls={deciding === d.id ? `decide-${d.id}` : undefined}
@@ -128,7 +143,7 @@ function Disputes({ disputes, onDecided }: { disputes: OpenDispute[]; onDecided:
           <DisputeDecision
             key={open.id}
             dispute={open}
-            onClose={() => setDeciding(null)}
+            onClose={() => close(open.id)}
             onDecided={async (said) => {
               setDeciding(null);
               await onDecided(said);
@@ -159,6 +174,21 @@ function ResolveFlag({ flag, onResolved }: { flag: ReconciliationFlag; onResolve
   );
 }
 
+function RetryRelease({ flag, milestoneId, onDone }: { flag: ReconciliationFlag; milestoneId: string; onDone: (said: string) => Promise<unknown> }) {
+  return (
+    <ConfirmDialog
+      trigger={<Button tone="plain">Retry the release</Button>}
+      title={`Retry the release on Deed No. ${flag.deed_no}`}
+      effect="Asks Razorpay again to release what’s left of this milestone to the Maker."
+      confirmLabel="Ask Razorpay again"
+      onConfirm={async () => {
+        const { message } = await api.post<{ message: string }>(`/admin/milestones/${milestoneId}/retry-release`);
+        await onDone(message);
+      }}
+    />
+  );
+}
+
 function Flags({ flags, caption, onResolved }: { flags: ReconciliationFlag[]; caption: string; onResolved: (said: string) => Promise<unknown> }) {
   return (
     <DeskTable
@@ -175,7 +205,10 @@ function Flags({ flags, caption, onResolved }: { flags: ReconciliationFlag[]; ca
           <td className={`${CELL} figures`}>{when(f.first_seen_at)}</td>
           <td className={`${CELL} figures`}>{when(f.last_seen_at)}</td>
           <td className={CELL}>
-            <ResolveFlag flag={f} onResolved={onResolved} />
+            <div className="flex flex-col items-start gap-2">
+              {f.kind === "release_stuck" && f.milestone_id ? <RetryRelease flag={f} milestoneId={f.milestone_id} onDone={onResolved} /> : null}
+              <ResolveFlag flag={f} onResolved={onResolved} />
+            </div>
           </td>
         </tr>
       ))}
@@ -223,8 +256,7 @@ function RetryRegistry({ record, onDone }: { record: RegistryFailure; onDone: (s
       await api.post(`/admin/registry/${record.id}/retry`);
       await onDone({ text: `The ${record.kind} record for Deed No. ${record.deed_no} is queued again.`, tone: "ok" });
     } catch (caught) {
-      console.warn("registry retry failed", caught);
-      await onDone({ text: caught instanceof ApiError ? caught.message : "That retry didn’t go through. Try again.", tone: "error" });
+      await onDone({ text: explain(caught, "That retry didn’t go through. Reload the desk to see where it stands."), tone: "error" });
     } finally {
       setBusy(false);
     }
@@ -316,6 +348,7 @@ function Desk({ queue }: { queue: DeskQueue }) {
 
   return (
     <div className={PAGE}>
+      {TITLE}
       <PageHeader
         kicker="Desk"
         title="The desk"
@@ -403,12 +436,20 @@ function Desk({ queue }: { queue: DeskQueue }) {
 
 export default function Admin() {
   const query = useQuery({ queryKey: ["admin-queue"], queryFn: () => api.get<DeskQueue>("/admin/queue") });
-  if (query.isPending) return <Waiting>Opening the desk.</Waiting>;
+  if (query.isPending) {
+    return (
+      <>
+        {TITLE}
+        <Waiting>Opening the desk.</Waiting>
+      </>
+    );
+  }
   if (query.isError) {
     if (query.error instanceof ApiError && [401, 403, 404].includes(query.error.status)) return <NothingHere />;
     return (
       <div className={PAGE}>
-        <Notice tone="error">{query.error instanceof ApiError ? query.error.message : "The desk didn’t load. Try again in a moment."}</Notice>
+        {TITLE}
+        <Notice tone="error">{explain(query.error, "The desk didn’t load. Try again in a moment.")}</Notice>
         <Button tone="plain" className="mt-4" onClick={() => void query.refetch()}>
           Try again
         </Button>

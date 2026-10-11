@@ -12,11 +12,16 @@ export interface PersonaSession {
 let client: Promise<SupabaseClient> | null = null;
 
 export function supabase(): Promise<SupabaseClient> {
-  client ??= loadConfig().then((config) =>
-    createClient(config.supabase_url, config.supabase_anon_key, {
-      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "vaada.auth" },
-    }),
-  );
+  client ??= loadConfig()
+    .then((config) =>
+      createClient(config.supabase_url, config.supabase_anon_key, {
+        auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, storageKey: "vaada.auth" },
+      }),
+    )
+    .catch((error: unknown) => {
+      client = null;
+      throw error;
+    });
   return client;
 }
 

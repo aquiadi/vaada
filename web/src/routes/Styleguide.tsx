@@ -85,7 +85,6 @@ export default function Styleguide() {
 
   return (
     <div className="mx-auto max-w-[76rem] px-4 py-10 sm:px-8">
-      <title>Styleguide · Vaada</title>
       <PageHeader
         kicker="For the people who build Vaada"
         title="Styleguide"

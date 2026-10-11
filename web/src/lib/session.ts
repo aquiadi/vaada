@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ApiError, api } from "./api";
-import { personaSession, supabase } from "./auth";
+import { personaSession, setPersonaSession, supabase } from "./auth";
 import type { Me } from "./types";
 
 /** Bumps whenever the person signed in changes: a persona switch, a Supabase sign-in, a sign-out. */
@@ -37,14 +37,12 @@ export function useMe() {
       try {
         return await api.get<Me>("/me");
       } catch (error) {
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) return null;
-        throw error;
+        if (!(error instanceof ApiError) || (error.status !== 401 && error.status !== 403)) throw error;
+        // An expired persona token would otherwise be sent with every request from now on.
+        if (error.status === 401 && personaSession()) setPersonaSession(null);
+        return null;
       }
     },
     staleTime: 15_000,
   });
-}
-
-export function personaName(): string | null {
-  return personaSession()?.name ?? null;
 }

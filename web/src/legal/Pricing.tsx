@@ -1,8 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { Rupees } from "../components/ui";
-import { rupeesInWords } from "../format/money";
-import { percentFromBps, processingFeePaise, usePolicyNumbers } from "./policyNumbers";
+import { processingFeePaise, rupeesInWords } from "../format/money";
+import { percentFromBps, type PolicyNumbers, usePolicyNumbers } from "./policyNumbers";
 import { Clause, Items, PolicySheet } from "./PolicySheet";
 
 const EXAMPLE_TOTAL_PAISE = 25_000_00;
@@ -42,27 +42,53 @@ function Account({ caption, lines, total }: { caption: string; lines: Line[]; to
   );
 }
 
+const GATEWAY_CHARGE = "Razorpay may add its own charge at checkout; it isn’t refunded.";
+
+function lede(n: PolicyNumbers): string {
+  const clients =
+    n.clientFeeBps === 0
+      ? "Clients pay the deal total, and Razorpay may add its own charge at checkout."
+      : "Clients pay a small processing fee on top of the deal.";
+  const makers = n.platformFeeBps === 0 ? "Makers pay Vaada nothing at present." : "Vaada keeps a small share of each part it pays out.";
+  return `${clients} ${makers}`;
+}
+
+function ForClients({ clientFeeBps }: { clientFeeBps: number }) {
+  if (clientFeeBps === 0) {
+    return (
+      <p>
+        The client pays the deal total, once, at the start. Vaada adds no processing fee. {GATEWAY_CHARGE}
+      </p>
+    );
+  }
+  return (
+    <p>
+      The client pays the deal total, plus a processing fee of <span className="figures">{percentFromBps(clientFeeBps)}</span> of the
+      deal total, rounded up to the paisa. The fee covers the payment gateway’s charges and is not refundable. It is shown on its own
+      line before you pay, and the whole sum is paid once, at the start.
+    </p>
+  );
+}
+
 export function Pricing() {
   const n = usePolicyNumbers();
   const fee = processingFeePaise(EXAMPLE_TOTAL_PAISE, n.clientFeeBps);
   const platformFee = Math.floor((EXAMPLE_TOTAL_PAISE * n.platformFeeBps) / 10_000);
   const clientPays = EXAMPLE_TOTAL_PAISE + fee;
   const makerReceives = EXAMPLE_TOTAL_PAISE - platformFee;
+  const dealTotal: Line = { label: "Deal total", paise: EXAMPLE_TOTAL_PAISE };
+  const feeLine: Line = {
+    label: (
+      <>
+        Processing fee, <span className="figures">{percentFromBps(n.clientFeeBps)}</span>
+      </>
+    ),
+    paise: fee,
+  };
   return (
-    <PolicySheet
-      slug="pricing"
-      lede={
-        n.platformFeeBps === 0
-          ? "Clients pay a small processing fee on top of the deal. Makers pay Vaada nothing at present."
-          : "Clients pay a small processing fee on top of the deal, and Vaada keeps a small share of each part it pays out."
-      }
-    >
+    <PolicySheet slug="pricing" lede={lede(n)}>
       <Clause n={1} title="For clients">
-        <p>
-          The client pays the deal total, plus a processing fee of <span className="figures">{percentFromBps(n.clientFeeBps)}</span> of
-          the deal total, rounded up to the paisa. The fee covers the payment gateway’s charges and is not refundable. It is shown on its
-          own line before you pay, and the whole sum is paid once, at the start.
-        </p>
+        <ForClients clientFeeBps={n.clientFeeBps} />
       </Clause>
 
       <Clause n={2} title="For makers">
@@ -87,28 +113,16 @@ export function Pricing() {
           <div>
             <Account
               caption="What the client pays"
-              lines={[
-                { label: "Deal total", paise: EXAMPLE_TOTAL_PAISE },
-                {
-                  label: (
-                    <>
-                      Processing fee, <span className="figures">{percentFromBps(n.clientFeeBps)}</span>
-                    </>
-                  ),
-                  paise: fee,
-                },
-              ]}
+              lines={fee > 0 ? [dealTotal, feeLine] : [dealTotal]}
               total={{ label: "Client pays", paise: clientPays }}
             />
             <p className="mt-2 text-note italic text-ink-soft">{rupeesInWords(clientPays)}</p>
+            {fee > 0 ? null : <p className="mt-2 text-note text-ink">{GATEWAY_CHARGE}</p>}
           </div>
           <div>
             <Account
               caption="What the maker receives"
-              lines={[
-                { label: "Deal total", paise: EXAMPLE_TOTAL_PAISE },
-                { label: "Vaada’s fee", paise: platformFee },
-              ]}
+              lines={[dealTotal, { label: "Vaada’s fee", paise: platformFee }]}
               total={{ label: "Maker receives", paise: makerReceives }}
             />
             <p className="mt-2 text-note italic text-ink-soft">Over the parts of the deed, as each is released.</p>

@@ -56,6 +56,8 @@ class DealFacts:
     room_url: str
     deed_url: str
     client_fee_paise: int = 0
+    review_days: int = 5
+    buffer_hours: int = 24
 
     @property
     def no(self) -> str:
@@ -65,6 +67,11 @@ class DealFacts:
     def fee_not_refunded(self) -> str:
         """Said only when there was a processing fee; with Razorpay's customer-fee model there is none from Vaada."""
         return " The processing fee is not refunded." if self.client_fee_paise else ""
+
+    @property
+    def unanswered_release(self) -> str:
+        """When a delivered part is released if the Client neither approves nor disputes it, as the deed words it."""
+        return f"{_span(self.buffer_hours)} after its {_count_word(self.review_days)}-day review ends"
 
 
 @dataclass(frozen=True)
@@ -79,6 +86,20 @@ class MilestoneFacts:
         return f"milestone {roman(self.idx)}, {self.title}"
 
 
+NUMBER_WORDS = ("zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten")
+
+
+def _count_word(n: int) -> str:
+    return NUMBER_WORDS[n] if 0 <= n < len(NUMBER_WORDS) else str(n)
+
+
+def _span(hours: int) -> str:
+    if hours % 24:
+        return f"{_count_word(hours)} hour{'s' if hours != 1 else ''}"
+    days = hours // 24
+    return f"{_count_word(days)} day{'s' if days != 1 else ''}"
+
+
 SETTLEMENT = "Razorpay pays it out on the next settlement, usually within two working days."
 
 
@@ -90,7 +111,7 @@ def deed_sent(d: DealFacts, *, total_paise: int, client_fee_paise: int, first_du
         paragraphs=[
             f"It's Deed No. {d.no}, for {d.title}. Read it through, and if it's right, accept it and pay. "
             "The money is held by Razorpay and only reaches "
-            f"{d.maker} as each part of the work is approved, or once its review period after delivery ends.",
+            f"{d.maker} as each part of the work is approved, or {d.unanswered_release} if you say nothing.",
             f"The deed can be accepted until {ist_day(first_due)}.",
         ],
         rows=[
@@ -125,7 +146,7 @@ def deal_funded(d: DealFacts, *, role: str, total_paise: int, first_due: datetim
     else:
         paragraphs = [
             f"Your payment went through. {rupees(total_paise)} is held by Razorpay and goes to {d.maker} "
-            "one milestone at a time, as you approve the work or once its review period after delivery ends."
+            f"one milestone at a time, as you approve the work, or {d.unanswered_release} if you say nothing."
             + d.fee_not_refunded,
         ]
     return Message(

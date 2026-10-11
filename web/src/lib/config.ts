@@ -41,7 +41,11 @@ let cached: Promise<AppConfig> | null = null;
 
 /** The API is the single source of truth for environment, keys and limits, so the web build needs only VITE_API_URL. */
 export function loadConfig(): Promise<AppConfig> {
-  cached ??= request<AppConfig>("GET", "/config", undefined, { auth: false });
+  // A failed load is forgotten, so the next request tries again instead of failing until a reload.
+  cached ??= request<AppConfig>("GET", "/config", undefined, { auth: false }).catch((error: unknown) => {
+    cached = null;
+    throw error;
+  });
   return cached;
 }
 

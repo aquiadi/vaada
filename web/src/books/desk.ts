@@ -16,6 +16,8 @@ export interface ReconciliationFlag {
   id: string;
   deal_id: string;
   deed_no: string;
+  /** Set when the flag is about one milestone, such as a release that didn't go through after a refund. */
+  milestone_id: string | null;
   kind: string;
   summary: string;
   first_seen_at: string;

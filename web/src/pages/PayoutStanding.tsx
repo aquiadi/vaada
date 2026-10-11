@@ -26,7 +26,9 @@ function Explanation({ payout }: { payout: Payout }) {
       return (
         <>
           <p className="m-0">Razorpay is checking your bank account. This usually takes a few minutes; in testing it can take a day.</p>
-          <p className="m-0 mt-2 text-note text-ink-soft">This page looks again every few seconds. You can leave it and come back.</p>
+          <p className="m-0 mt-2 text-note text-ink-soft">
+            This page keeps looking while it is open, less often as time goes on. You can leave it and come back.
+          </p>
         </>
       );
     case "needs_clarification":

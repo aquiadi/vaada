@@ -8,6 +8,7 @@ import { deedNumber } from "../design/DeedSheet";
 import { formatInstantIst, formatIsoDate, istDateOf } from "../format/dates";
 import { toRoman } from "../format/roman";
 import { ApiError, api, download } from "../lib/api";
+import { explain } from "../lib/errors";
 
 type Filter = "all" | "open" | "held" | "released";
 
@@ -41,6 +42,7 @@ const FILTERS: ReadonlyArray<{ value: Filter; label: string; empty: string }> = 
 ];
 
 const PAGE = "mx-auto max-w-6xl px-4 py-10 sm:px-6";
+const TITLE = <title>Your ledger · Vaada</title>;
 
 /** The date column is dropped on a phone, so a month heading spans three columns there and four on wider screens. */
 const MONTH = "pb-1 pt-5 text-left font-display text-lede font-medium text-ink";
@@ -90,59 +92,71 @@ function Particulars({ entry }: { entry: LedgerEntry }) {
   );
 }
 
-function EntryRows({ entries }: { entries: LedgerEntry[] }) {
-  let month = "";
-  let day = "";
-  return entries.flatMap((entry, i) => {
-    const rows = [];
-    const entryMonth = monthOf.format(new Date(entry.at));
-    if (entryMonth !== month) {
-      month = entryMonth;
-      day = "";
-      rows.push(
-        <tr key={`month-${entryMonth}`}>
-          <th colSpan={3} scope="colgroup" className={`${MONTH} sm:hidden`}>
-            {entryMonth}
-          </th>
-          <th colSpan={4} scope="colgroup" className={`${MONTH} hidden sm:table-cell`}>
-            {entryMonth}
-          </th>
-        </tr>,
-      );
-    }
-    const entryDay = dayInMonth(entry.at);
-    const sameDay = entryDay === day;
-    day = entryDay;
-    rows.push(
-      <tr key={`${entry.at}-${i}`} className="border-b hairline align-top">
-        <td className="hidden py-2.5 pr-3 font-ui text-ui text-ink-soft sm:table-cell">
-          <time dateTime={entry.at} className="figures">
-            {sameDay ? (
-              <>
-                <span aria-hidden="true" className="block pl-3 font-serif text-body leading-tight">
-                  ″
-                </span>
-                <span className="sr-only">{entryDay}, </span>
-              </>
-            ) : (
-              <span className="block text-ink">{entryDay}</span>
-            )}
-            <span className="block">{timeOf(entry.at)}</span>
-          </time>
-        </td>
-        <td className="min-w-0 py-2.5 pr-3 text-note sm:text-body">
-          <Particulars entry={entry} />
-        </td>
-        <td className="border-l hairline py-2.5 pl-2 pr-1 text-right text-note text-ink sm:pl-3 sm:pr-3 sm:text-body">
-          {entry.held_paise ? <Rupees paise={entry.held_paise} /> : null}
-        </td>
-        <td className="border-l hairline py-2.5 pl-2 text-right text-note text-ink sm:pl-3 sm:text-body">
-          {entry.received_paise ? <Rupees paise={entry.received_paise} /> : null}
-        </td>
-      </tr>,
-    );
-    return rows;
-  });
+interface MonthOfEntries {
+  month: string;
+  entries: LedgerEntry[];
+}
+
+function byMonth(entries: LedgerEntry[]): MonthOfEntries[] {
+  const months: MonthOfEntries[] = [];
+  for (const entry of entries) {
+    const month = monthOf.format(new Date(entry.at));
+    const current = months[months.length - 1];
+    if (current?.month === month) current.entries.push(entry);
+    else months.push({ month, entries: [entry] });
+  }
+  return months;
+}
+
+function EntryRow({ entry, sameDay }: { entry: LedgerEntry; sameDay: boolean }) {
+  const day = dayInMonth(entry.at);
+  return (
+    <tr className="border-b hairline align-top">
+      <td className="hidden py-2.5 pr-3 text-note text-ink-soft sm:table-cell">
+        <time dateTime={entry.at} className="figures">
+          {sameDay ? (
+            <>
+              <span aria-hidden="true" className="block pl-3 text-body leading-tight">
+                ″
+              </span>
+              <span className="sr-only">{day}, </span>
+            </>
+          ) : (
+            <span className="block text-ink">{day}</span>
+          )}
+          <span className="block">{timeOf(entry.at)}</span>
+        </time>
+      </td>
+      <td className="min-w-0 py-2.5 pr-3 text-note sm:text-body">
+        <Particulars entry={entry} />
+      </td>
+      <td className="border-l hairline py-2.5 pl-2 pr-1 text-right text-note text-ink sm:pl-3 sm:pr-3 sm:text-body">
+        {entry.held_paise ? <Rupees paise={entry.held_paise} /> : null}
+      </td>
+      <td className="border-l hairline py-2.5 pl-2 text-right text-note text-ink sm:pl-3 sm:text-body">
+        {entry.received_paise ? <Rupees paise={entry.received_paise} /> : null}
+      </td>
+    </tr>
+  );
+}
+
+/** Each month is its own row group, so its heading heads the entries under it. */
+function MonthRows({ month, entries }: MonthOfEntries) {
+  return (
+    <tbody>
+      <tr>
+        <th colSpan={3} scope="rowgroup" className={`${MONTH} sm:hidden`}>
+          {month}
+        </th>
+        <th colSpan={4} scope="rowgroup" className={`${MONTH} hidden sm:table-cell`}>
+          {month}
+        </th>
+      </tr>
+      {entries.map((entry, i) => (
+        <EntryRow key={`${entry.at}-${i}`} entry={entry} sameDay={i > 0 && dayInMonth(entries[i - 1]!.at) === dayInMonth(entry.at)} />
+      ))}
+    </tbody>
+  );
 }
 
 function FootRow({ label, held, received, last = false }: { label: string; held: number; received: number; last?: boolean }) {
@@ -192,9 +206,9 @@ function LedgerTable({ ledger, filter }: { ledger: Ledger; filter: Filter }) {
           </th>
         </tr>
       </thead>
-      <tbody>
-        <EntryRows entries={ledger.entries} />
-      </tbody>
+      {byMonth(ledger.entries).map((group) => (
+        <MonthRows key={group.month} {...group} />
+      ))}
       <tfoot className="border-t border-ink">
         {filter === "all" ? (
           <FootRow label="Balance as of today" held={ledger.balances.held_paise} received={ledger.balances.received_paise} last />
@@ -246,8 +260,7 @@ function CsvExport() {
     try {
       await download("/ledger.csv", "vaada-ledger.csv");
     } catch (caught) {
-      console.warn("ledger export failed", caught);
-      setError(caught instanceof ApiError ? caught.message : "The download didn’t start. Try again.");
+      setError(explain(caught, "The download didn’t start. Try again."));
     } finally {
       setBusy(false);
     }
@@ -291,12 +304,15 @@ export default function LedgerPage() {
 
   if (query.isError && query.error instanceof ApiError && query.error.status === 401) {
     return (
-      <SignInFirst
-        kicker="Bahi-khata"
-        title="Sign in to see your ledger"
-        lede="Your ledger lists every rupee your deeds have moved. Only you can see it."
-        next="/ledger"
-      />
+      <>
+        {TITLE}
+        <SignInFirst
+          kicker="Bahi-khata"
+          title="Sign in to see your ledger"
+          lede="Your ledger lists every rupee your deeds have moved. Only you can see it."
+          next="/ledger"
+        />
+      </>
     );
   }
 
@@ -305,6 +321,7 @@ export default function LedgerPage() {
 
   return (
     <div className={PAGE}>
+      {TITLE}
       <PageHeader
         kicker="Bahi-khata"
         title="Your ledger"
@@ -326,7 +343,7 @@ export default function LedgerPage() {
       {query.isPending ? <Waiting>Opening the ledger.</Waiting> : null}
       {query.isError ? (
         <div>
-          <Notice tone="error">{query.error instanceof ApiError ? query.error.message : "The ledger didn’t load. Try again in a moment."}</Notice>
+          <Notice tone="error">{explain(query.error, "The ledger didn’t load. Try again in a moment.")}</Notice>
           <Button tone="plain" className="mt-4" onClick={() => void query.refetch()}>
             Try again
           </Button>

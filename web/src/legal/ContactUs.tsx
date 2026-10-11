@@ -1,20 +1,6 @@
 import type { ReactNode } from "react";
-import { useConfig, type AppConfig } from "../lib/config";
+import { LegalEntity, OwnerDetail, usePublishedContact } from "./OwnerDetails";
 import { Clause, Placeholder, PolicySheet } from "./PolicySheet";
-
-/** The owner's details from /config; an empty one keeps its placeholder. */
-function publishedContact(config: AppConfig | undefined): AppConfig["contact"] {
-  const contact = config?.contact;
-  const text = (value: string | undefined) => value?.trim() ?? "";
-  return {
-    address: text(contact?.address),
-    phone: text(contact?.phone),
-    email: text(contact?.email),
-    legal_entity: text(contact?.legal_entity),
-    grievance_officer: text(contact?.grievance_officer),
-    jurisdiction_city: text(contact?.jurisdiction_city),
-  };
-}
 
 function Entry({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -35,14 +21,13 @@ function EmailAddress({ email }: { email: string }) {
 }
 
 export function ContactUs() {
-  const { data: config } = useConfig();
-  const contact = publishedContact(config);
+  const contact = usePublishedContact();
   return (
     <PolicySheet slug="contact" lede="Write to us about a deed, a payment, a refund or your data. We aim to reply within two working days.">
       <Clause n={1} title="Where to find us">
         <dl>
           <Entry label="Operated by">
-            <Placeholder>Legal entity name to be added</Placeholder>
+            <LegalEntity />
           </Entry>
           <Entry label="Registered address">
             {contact.address ? (
@@ -82,7 +67,7 @@ export function ContactUs() {
         </p>
         <dl>
           <Entry label="Name">
-            <Placeholder>Grievance officer’s name to be added</Placeholder>
+            <OwnerDetail value={contact.grievance_officer} missing="Grievance officer’s name to be added" />
           </Entry>
           <Entry label="Email">
             <EmailAddress email={contact.email} />

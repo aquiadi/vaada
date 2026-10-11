@@ -114,6 +114,8 @@ async def deal_facts(session: AsyncSession, settings: Settings, deal: Deal) -> D
         room_url=f"{settings.web_url}/d/{deal.id}",
         deed_url=f"{settings.web_url}/a/{deal.slug}",
         client_fee_paise=deal.client_fee_paise,
+        review_days=settings.review_window_days,
+        buffer_hours=settings.hold_buffer_hours,
     )
 
 

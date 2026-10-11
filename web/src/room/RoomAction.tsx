@@ -8,6 +8,7 @@ import { toRoman } from "../format/roman";
 import { api } from "../lib/api";
 import { useConfig } from "../lib/config";
 import type { Action, Room, RoomMilestone } from "../lib/types";
+import { email as normalizeEmail } from "../normalize";
 import { addDays, fromIsoDate, toIsoDate } from "../normalize/calendar";
 import { NoteField } from "./NoteField";
 import { firstName, otherParty } from "./words";
@@ -30,6 +31,7 @@ export function RoomAction({ action, room, milestone, onDone }: Props) {
   const { data: config } = useConfig();
   const [text, setText] = useState("");
   const [newDue, setNewDue] = useState("");
+  const [addressLeft, setAddressLeft] = useState(false);
 
   if (!HANDLED.has(action.action)) return null;
 
@@ -44,6 +46,9 @@ export function RoomAction({ action, room, milestone, onDone }: Props) {
 
   const base = milestone ? `/milestones/${milestone.id}` : `/deals/${room.id}`;
   const other = firstName(otherParty(room));
+  // Read the way the deed's Send reads it, so a mistyped address is caught here and not by the API's pattern.
+  const resendTo = action.action === "resend" ? normalizeEmail(text) : null;
+  const resendAddress = resendTo && resendTo.confidence !== "failed" ? resendTo.value : null;
 
   async function send(): Promise<string | null> {
     switch (action.action) {
@@ -68,8 +73,8 @@ export function RoomAction({ action, room, milestone, onDone }: Props) {
         await api.post(`${base}/withdraw`);
         return null;
       case "resend":
-        await api.post(`${base}/resend`, { client_email: text.trim() });
-        return `Sent again to ${text.trim()}.`;
+        await api.post(`${base}/resend`, { client_email: resendAddress });
+        return `Sent again to ${resendAddress}.`;
     }
     return null;
   }
@@ -83,6 +88,7 @@ export function RoomAction({ action, room, milestone, onDone }: Props) {
     const message = await send();
     setText("");
     setNewDue("");
+    setAddressLeft(false);
     await onDone(message);
   }
 
@@ -131,14 +137,22 @@ export function RoomAction({ action, room, milestone, onDone }: Props) {
         <Field
           type="email"
           label="Send it to"
-          hint={room.client.email_masked ? `It last went to ${room.client.email_masked}.` : undefined}
+          hint={
+            resendAddress && resendTo?.note
+              ? resendTo.note
+              : room.client.email_masked
+                ? `It last went to ${room.client.email_masked}.`
+                : undefined
+          }
+          error={!resendAddress && addressLeft && text.trim() ? resendTo?.note : null}
           value={text}
           onChange={(event) => setText(event.target.value)}
+          onBlur={() => setAddressLeft(true)}
           autoComplete="email"
           required
         />
       );
-      ready = text.includes("@");
+      ready = resendAddress !== null;
       break;
   }
 

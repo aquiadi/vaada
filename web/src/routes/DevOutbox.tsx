@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Button, Mono, Notice, PageHeader, Waiting } from "../components/ui";
 import { formatInstantIst } from "../format/dates";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 
 interface OutboxEmail {
   id: string;
@@ -15,6 +16,7 @@ interface OutboxEmail {
 }
 
 const PAGE = "mx-auto max-w-6xl px-4 py-10 sm:px-6";
+const TITLE = <title>Outbox · Vaada</title>;
 
 function Letter({ email, number }: { email: OutboxEmail; number: number }) {
   return (
@@ -63,6 +65,7 @@ export default function DevOutbox() {
   if (query.isError && query.error instanceof ApiError && query.error.status === 404) {
     return (
       <div className={PAGE}>
+        {TITLE}
         <PageHeader
           kicker="Outbox"
           title="There is no outbox here"
@@ -75,6 +78,7 @@ export default function DevOutbox() {
   const emails = query.data?.emails ?? [];
   return (
     <div className={PAGE}>
+      {TITLE}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <PageHeader
           kicker="Outbox · development and demo"
@@ -87,7 +91,7 @@ export default function DevOutbox() {
       </div>
       {query.isPending ? <Waiting>Opening the register.</Waiting> : null}
       {query.isError ? (
-        <Notice tone="error">{query.error instanceof ApiError ? query.error.message : "The outbox didn’t load. Try again."}</Notice>
+        <Notice tone="error">{explain(query.error, "The outbox didn’t load. Try again.")}</Notice>
       ) : null}
       {query.isSuccess && emails.length === 0 ? <p className="m-0 text-body italic text-ink-soft">No letters yet.</p> : null}
       {emails.length > 0 ? (

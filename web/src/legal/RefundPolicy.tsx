@@ -46,11 +46,18 @@ export function RefundPolicy() {
       <Clause n={5} title="What isn’t refunded">
         <Items
           items={[
-            <>
-              The processing fee, <span className="figures">{percentFromBps(n.clientFeeBps)}</span> of the deal total. It pays the
-              payment gateway’s charges, which are spent the moment the payment is made, so it isn’t refunded even when the whole deal
-              total is.
-            </>,
+            n.clientFeeBps === 0 ? (
+              <>
+                Any charge Razorpay adds at checkout. Vaada adds no processing fee, but Razorpay may add its own charge when the client
+                pays, and it isn’t refunded even when the whole deal total is.
+              </>
+            ) : (
+              <>
+                The processing fee, <span className="figures">{percentFromBps(n.clientFeeBps)}</span> of the deal total. It pays the
+                payment gateway’s charges, which are spent the moment the payment is made, so it isn’t refunded even when the whole
+                deal total is.
+              </>
+            ),
             <>Money already released to the maker.</>,
             <>A late fee, or anything else the parties settle directly between themselves rather than through Vaada.</>,
           ]}

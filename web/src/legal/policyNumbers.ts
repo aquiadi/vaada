@@ -29,7 +29,7 @@ const AS_PUBLISHED: PolicyNumbers = {
   minDealPaise: 500_00,
 };
 
-export function policyNumbersFrom(config: AppConfig): PolicyNumbers {
+function policyNumbersFrom(config: AppConfig): PolicyNumbers {
   return {
     clientFeeBps: config.fees.client_fee_bps,
     platformFeeBps: config.fees.platform_fee_bps,
@@ -65,9 +65,4 @@ export function percentFromBps(bps: number): string {
   const hundredths = bps % 100;
   if (hundredths === 0) return `${whole}%`;
   return `${whole}.${String(hundredths).padStart(2, "0").replace(/0$/, "")}%`;
-}
-
-/** The processing fee on a deal total, rounded up to the paisa, as the API charges it. */
-export function processingFeePaise(totalPaise: number, bps: number): number {
-  return Math.floor((totalPaise * bps + 9_999) / 10_000);
 }

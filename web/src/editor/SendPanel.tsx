@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { Link } from "react-router";
-import { Button, ButtonLink, Field, Notice } from "../components/ui";
+import { Button, ButtonLink, Field, focusOnMount, Notice } from "../components/ui";
 import { ApiError, api } from "../lib/api";
 import { explain } from "../lib/errors";
 import { useMe } from "../lib/session";
@@ -12,8 +12,6 @@ import { DraftNotSaved } from "./useAutosave";
 
 /** Razorpay usually takes minutes to days to activate an account, so a look every half minute is plenty. */
 const PAYOUT_POLL_MS = 30_000;
-
-const focusOnMount = (element: HTMLElement | null) => element?.focus();
 
 export function whatsappLink(room: Room, link: string): string {
   const client = firstName(room.client.name);

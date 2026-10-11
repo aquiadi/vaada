@@ -1,7 +1,8 @@
 import * as Checkbox from "@radix-ui/react-checkbox";
 import { useId, useState, type FormEvent } from "react";
 import { Button, Field, Notice } from "../components/ui";
-import { ApiError, api } from "../lib/api";
+import { api } from "../lib/api";
+import { explain } from "../lib/errors";
 import type { PublicDeed } from "../lib/types";
 
 interface Props {
@@ -33,7 +34,7 @@ export function Clickwrap({ slug, email, onAccepted }: Props) {
     try {
       onAccepted(await api.post<PublicDeed>(`/public/deeds/${slug}/accept`, { full_name: name, agree: true }));
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Your acceptance didn’t go through. Nothing has been recorded; try again.");
+      setError(explain(caught, "We couldn’t confirm your acceptance. Reload the page to see whether it was recorded before you try again."));
     } finally {
       setBusy(false);
     }
@@ -88,7 +89,7 @@ export function Clickwrap({ slug, email, onAccepted }: Props) {
           </label>
         </div>
         {agreeError ? (
-          <p id={`${agreeId}-error`} className="m-0 mt-1 pl-8 text-note text-bahi">
+          <p id={`${agreeId}-error`} role="alert" className="m-0 ml-8 mt-1 border-l-2 border-bahi pl-2 text-note text-ink">
             {agreeError}
           </p>
         ) : null}

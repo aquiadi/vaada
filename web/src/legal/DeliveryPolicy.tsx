@@ -94,8 +94,8 @@ export function DeliveryPolicy() {
         <Items
           items={[
             <>
-              The client pays the whole deal total and the processing fee within {daysInWords(n.acceptPayDays)} of accepting, and
-              before the first part is due. Razorpay holds it.
+              The client pays the whole deal total{n.clientFeeBps === 0 ? "" : " and the processing fee"} within{" "}
+              {daysInWords(n.acceptPayDays)} of accepting, and before the first part is due. Razorpay holds the deal total.
             </>,
             <>The maker marks a part delivered. Its money stays held.</>,
             <>The client has {review} days to approve the part or raise a dispute.</>,

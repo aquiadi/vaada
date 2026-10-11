@@ -5,7 +5,8 @@ import { Button, Field, Notice, Rupees } from "../components/ui";
 import { formatInstantIst } from "../format/dates";
 import { formatRupees } from "../format/money";
 import { toRoman } from "../format/roman";
-import { ApiError, api } from "../lib/api";
+import { api } from "../lib/api";
+import { explain } from "../lib/errors";
 import { NoteField } from "../room/NoteField";
 import type { OpenDispute, Resolution, ResolutionPreview } from "./desk";
 import { parseRupees } from "./paise";
@@ -130,9 +131,7 @@ export function DisputeDecision({ dispute, onDecided, onClose }: Props) {
             ) : !ready ? (
               <p className="m-0 text-note italic text-ink-soft">Write the refund amount to see what each side gets.</p>
             ) : preview.isError ? (
-              <Notice tone="error">
-                {preview.error instanceof ApiError ? preview.error.message : "We couldn’t work out this decision. Try again."}
-              </Notice>
+              <Notice tone="error">{explain(preview.error, "We couldn’t work out this decision. Try again.")}</Notice>
             ) : outcome ? (
               <dl className="figures m-0 grid grid-cols-[4.5rem_minmax(0,1fr)] gap-x-3 gap-y-2 border-y border-gold py-3 text-body">
                 <dt className="label pt-1">Client</dt>

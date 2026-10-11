@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Room, RoomMilestone } from "../lib/types";
-import { dealStanding, milestoneStanding, moneyStanding, partyName, stillSettling } from "./words";
+import { dealStanding, heldPaise, milestoneStanding, moneyStanding, partyName, stillSettling } from "./words";
 
 function milestone(idx: number, overrides: Partial<RoomMilestone> = {}): RoomMilestone {
   return {
@@ -75,7 +75,7 @@ describe("moneyStanding", () => {
         ],
       }),
     );
-    expect(standing).toEqual({ heldPaise: 1_250_000, releasedPaise: 1_250_000, refundedPaise: 0, unpaidPaise: 0 });
+    expect(standing).toEqual({ heldPaise: 1_250_000, releasedPaise: 1_250_000, toMakerPaise: 1_250_000, refundedPaise: 0, unpaidPaise: 0 });
   });
 
   it("splits a decided milestone between what was released and what was refunded", () => {
@@ -87,6 +87,19 @@ describe("moneyStanding", () => {
     );
     expect(standing.releasedPaise).toBe(750_000);
     expect(standing.refundedPaise).toBe(500_000);
+  });
+
+  it("counts what reaches the Maker after Vaada's fee and tax, apart from the gross release", () => {
+    const standing = moneyStanding(
+      room({
+        milestones: [
+          milestone(1, { status: "released", released_at: "2026-10-01T19:54:12+00:00", transfer_paise: 1_200_000 }),
+          milestone(2, { status: "resolved", released_at: "2026-10-05T10:00:00+00:00", transfer_paise: 1_200_000, refund_paise: 500_000 }),
+        ],
+      }),
+    );
+    expect(standing.releasedPaise).toBe(2_000_000);
+    expect(standing.toMakerPaise).toBe(1_900_000);
   });
 
   it("does not call a lapsed deed's parts unpaid", () => {
@@ -133,5 +146,17 @@ describe("words", () => {
   it("names the reader's own side as you", () => {
     expect(partyName(room(), "maker")).toBe("you");
     expect(partyName(room(), "client")).toBe("Rahul Mehta");
+  });
+});
+
+describe("heldPaise", () => {
+  it("counts only the parts Razorpay still holds", () => {
+    const parts = [
+      { amount_paise: 1_250_000, status: "released" as const },
+      { amount_paise: 750_000, status: "delivered" as const },
+      { amount_paise: 500_000, status: "disputed" as const },
+      { amount_paise: 250_000, status: "refunded" as const },
+    ];
+    expect(heldPaise(parts)).toBe(1_250_000);
   });
 });

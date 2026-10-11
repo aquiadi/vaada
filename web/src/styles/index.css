@@ -70,7 +70,8 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
+/* The lamp-lit desk is for screens only: on paper everything prints in the light palette, whatever the theme. */
+@media screen and (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #17140f;
     --paper-deep: #0f0d09;
@@ -85,17 +86,19 @@
   }
 }
 
-:root[data-theme="dark"] {
-  --paper: #17140f;
-  --paper-deep: #0f0d09;
-  --ink: #ece4d3;
-  --ink-soft: #b5ab98;
-  --bahi: #d9705f;
-  --gold: #c9a55a;
-  --stamp: #8db39c;
-  --grain-opacity: 0.05;
-  --guilloche-opacity: 0.38;
-  color-scheme: dark;
+@media screen {
+  :root[data-theme="dark"] {
+    --paper: #17140f;
+    --paper-deep: #0f0d09;
+    --ink: #ece4d3;
+    --ink-soft: #b5ab98;
+    --bahi: #d9705f;
+    --gold: #c9a55a;
+    --stamp: #8db39c;
+    --grain-opacity: 0.05;
+    --guilloche-opacity: 0.38;
+    color-scheme: dark;
+  }
 }
 
 @layer base {
@@ -169,10 +172,12 @@
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.35 0 0 0 0 0.28 0 0 0 0 0.18 0 0 0 1 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E");
     mix-blend-mode: multiply;
   }
-  :root[data-theme="dark"] .grain::before {
-    mix-blend-mode: screen;
+  @media screen {
+    :root[data-theme="dark"] .grain::before {
+      mix-blend-mode: screen;
+    }
   }
-  @media (prefers-color-scheme: dark) {
+  @media screen and (prefers-color-scheme: dark) {
     :root:not([data-theme="light"]) .grain::before {
       mix-blend-mode: screen;
     }
@@ -193,11 +198,12 @@
     font-feature-settings: "c2sc", "smcp";
   }
 
+  /* Small caps sit at x-height, so a label is set at the UI size to stay as legible as the capitals it replaced. */
   .label {
     font-family: var(--font-ui);
-    font-size: var(--text-micro);
+    font-size: var(--text-ui);
     font-weight: 500;
-    text-transform: uppercase;
+    font-variant-caps: all-small-caps;
     letter-spacing: 0.12em;
     color: var(--ink-soft);
   }
@@ -310,6 +316,13 @@
     }
     .sheet {
       box-shadow: none;
+    }
+    /* The pen strokes are measured from the screen's line boxes and would not follow the text as it reflows. */
+    .strike-strokes {
+      display: none;
+    }
+    .struck-words {
+      text-decoration: line-through 1.5px var(--ink);
     }
   }
 }

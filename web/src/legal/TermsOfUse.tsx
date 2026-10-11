@@ -1,20 +1,39 @@
 import { Link } from "react-router";
 import { Rupees } from "../components/ui";
 import { numberWord } from "../deed/blanks";
-import { Clause, Items, Placeholder, PolicySheet } from "./PolicySheet";
+import { LegalEntity, OwnerDetail, usePublishedContact } from "./OwnerDetails";
+import { Clause, Items, PolicySheet } from "./PolicySheet";
 import { daysInWords, hoursInWords, percentFromBps, usePolicyNumbers } from "./policyNumbers";
+
+function FeeTerm({ clientFeeBps }: { clientFeeBps: number }) {
+  if (clientFeeBps === 0) {
+    return (
+      <>
+        The client pays the whole deal total at the start. Vaada adds no processing fee; Razorpay may add its own charge at checkout,
+        and that charge isn’t refunded. <Link to="/pricing">Pricing</Link> has a worked example.
+      </>
+    );
+  }
+  return (
+    <>
+      The client pays the whole deal total at the start, together with a processing fee of{" "}
+      <span className="figures">{percentFromBps(clientFeeBps)}</span> of the total that covers the payment gateway’s charges. The fee
+      is shown on its own line before payment and is not refundable. <Link to="/pricing">Pricing</Link> has a worked example.
+    </>
+  );
+}
 
 export function TermsOfUse() {
   const n = usePolicyNumbers();
   const review = numberWord(n.reviewDays);
+  const contact = usePublishedContact();
   return (
     <PolicySheet slug="terms" lede="The agreement between you and Vaada when you write a deed here, accept one, or pay for one.">
       <Clause n={1} title="What Vaada is">
         <p>
           Vaada is a service for freelancers and their clients to write down a deal, called a deed, and to have the money for it
-          collected, held and paid out in parts by Razorpay, our payment gateway. Vaada is operated by{" "}
-          <Placeholder>Legal entity name to be added</Placeholder>, whose registered address is on our{" "}
-          <Link to="/legal/contact">contact page</Link>.
+          collected, held and paid out in parts by Razorpay, our payment gateway. Vaada is operated by <LegalEntity />, whose
+          registered address is on our <Link to="/legal/contact">contact page</Link>.
         </p>
         <p>
           In these terms a maker is the freelancer who writes and sends a deed, and a client is the person or business who accepts it
@@ -79,12 +98,7 @@ export function TermsOfUse() {
       <Clause n={4} title="Paying">
         <Items
           items={[
-            <>
-              The client pays the whole deal total at the start, together with a processing fee of{" "}
-              <span className="figures">{percentFromBps(n.clientFeeBps)}</span> of the total that covers the payment gateway’s
-              charges. The fee is shown on its own line before payment and is not refundable. <Link to="/pricing">Pricing</Link> has a
-              worked example.
-            </>,
+            <FeeTerm clientFeeBps={n.clientFeeBps} />,
             <>
               Payment is made through Razorpay Checkout by UPI, netbanking, or a debit or credit card issued in India on Visa,
               Mastercard or RuPay. EMI, wallets, international cards, American Express and Diners Club aren’t accepted, and UPI isn’t
@@ -192,8 +206,8 @@ export function TermsOfUse() {
 
       <Clause n={12} title="Law and courts">
         <p>
-          These terms are governed by the laws of India. Subject to § 7, the courts at <Placeholder>City to be added</Placeholder>{" "}
-          have jurisdiction over any dispute about them.
+          These terms are governed by the laws of India. Subject to § 7, the courts at{" "}
+          <OwnerDetail value={contact.jurisdiction_city} missing="City to be added" /> have jurisdiction over any dispute about them.
         </p>
       </Clause>
     </PolicySheet>

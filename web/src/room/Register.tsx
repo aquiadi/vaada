@@ -26,7 +26,7 @@ export function Register({ events }: { events: Room["events"] }) {
             const sameDay = previous !== undefined && dayAndTime(previous.at)[0] === day;
             return (
               <li key={`${event.at}-${event.kind}-${i}`} className="grid grid-cols-[5.5rem_minmax(0,1fr)] border-b hairline">
-                <p className="figures m-0 border-r-[3px] border-double border-bahi py-2 pr-2 text-right font-ui text-micro leading-snug text-ink-soft">
+                <p className="figures m-0 border-r-[3px] border-double border-bahi py-2 pr-2 text-right text-micro leading-snug text-ink-soft">
                   <time dateTime={event.at}>
                     {sameDay ? (
                       <>

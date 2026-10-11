@@ -2,7 +2,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { Link } from "react-router";
 import { Button, ButtonLink, Notice, PageHeader, Waiting } from "../components/ui";
-import { ApiError, api } from "../lib/api";
+import { api } from "../lib/api";
+import { explain } from "../lib/errors";
 import { useMe } from "../lib/session";
 import type { Payout } from "../lib/types";
 import type { PayoutFields } from "../pages/payoutForm";
@@ -10,8 +11,18 @@ import { PayoutFormSheet } from "../pages/PayoutFormSheet";
 import { PayoutStanding } from "../pages/PayoutStanding";
 
 const PAGE = "mx-auto max-w-6xl px-4 py-10 sm:px-6";
-const TITLE = "Where should we send your money?";
-const POLL_MS = 3000;
+const HEADING = "Where should we send your money?";
+const TITLE = <title>Payouts · Vaada</title>;
+
+/**
+ * Each look asks Razorpay live, and a review can take a day, so an open tab looks often at first and then less and
+ * less. Query skips the looks while the tab is hidden; the page looks once more when it is shown again.
+ */
+function lookAgainAfter(looks: number): number {
+  if (looks < 10) return 3_000;
+  if (looks < 30) return 15_000;
+  return 60_000;
+}
 
 const NEEDS_FORM: ReadonlySet<Payout["status"]> = new Set(["draft", "needs_clarification"]);
 
@@ -44,7 +55,8 @@ export default function Payouts() {
     queryKey: ["payouts"],
     queryFn: () => api.get<{ payout: Payout | null }>("/payouts"),
     enabled: !!me.data,
-    refetchInterval: (q) => (q.state.data?.payout?.status === "under_review" ? POLL_MS : false),
+    refetchInterval: (q) => (q.state.data?.payout?.status === "under_review" ? lookAgainAfter(q.state.dataUpdateCount) : false),
+    refetchOnWindowFocus: (q) => q.state.data?.payout?.status === "under_review",
   });
 
   useEffect(() => {
@@ -53,11 +65,31 @@ export default function Payouts() {
     document.getElementById("payout-standing")?.focus();
   }, [timesSaved]);
 
-  if (me.isPending) return <Waiting />;
+  if (me.isPending) {
+    return (
+      <>
+        {TITLE}
+        <Waiting />
+      </>
+    );
+  }
+  if (me.isError && !me.data) {
+    return (
+      <div className={PAGE}>
+        {TITLE}
+        <PageHeader kicker="Payouts" title={HEADING} />
+        <Notice tone="error">{explain(me.error, "We couldn’t check who’s signed in just now.")}</Notice>
+        <Button tone="plain" className="mt-4" onClick={() => void me.refetch()}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
   if (!me.data) {
     return (
       <div className={PAGE}>
-        <PageHeader kicker="Payouts" title={TITLE} lede="Sign in first, so we know whose money this is and where it should go." />
+        {TITLE}
+        <PageHeader kicker="Payouts" title={HEADING} lede="Sign in first, so we know whose money this is and where it should go." />
         <ButtonLink to={`/login?next=${encodeURIComponent("/payouts")}`}>Sign in</ButtonLink>
       </div>
     );
@@ -75,19 +107,16 @@ export default function Payouts() {
 
   return (
     <div className={PAGE}>
+      {TITLE}
       <PageHeader
         kicker="Payouts"
-        title={TITLE}
+        title={HEADING}
         lede="Razorpay pays you directly, into your own bank account. Tell it which account is yours, once, and everything released to you goes there."
       />
       {query.isPending ? <Waiting>Asking Razorpay.</Waiting> : null}
       {query.isError ? (
         <div>
-          <Notice tone="error">
-            {query.error instanceof ApiError
-              ? query.error.message
-              : "We couldn’t find out where your payouts stand. Try again in a moment."}
-          </Notice>
+          <Notice tone="error">{explain(query.error, "We couldn’t find out where your payouts stand. Try again in a moment.")}</Notice>
           <Button tone="plain" className="mt-4" onClick={() => void query.refetch()}>
             Try again
           </Button>

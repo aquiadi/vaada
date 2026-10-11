@@ -22,6 +22,11 @@ export class ApiError extends Error {
 
 const OFFLINE = "We couldn't reach Vaada. Check your connection and try again.";
 
+/** For an error page from something in between, such as a proxy's 502, which carries no message of ours. */
+function unexplained(status: number): string {
+  return `Vaada didn't answer properly (error ${status}). Try again in a minute; if it keeps happening, reload the page to see where things stand.`;
+}
+
 async function parse(response: Response): Promise<unknown> {
   const type = response.headers.get("content-type") ?? "";
   if (response.status === 204) return null;
@@ -50,10 +55,11 @@ export async function request<T>(method: string, path: string, body?: unknown, i
   const data = await parse(response);
   if (!response.ok) {
     const payload = (typeof data === "object" && data ? data : {}) as Record<string, unknown>;
+    if (typeof payload.message !== "string") console.warn("response without a message", method, path, response.status);
     throw new ApiError(
       response.status,
       String(payload.error ?? "error"),
-      String(payload.message ?? "Something went wrong. Try again."),
+      typeof payload.message === "string" ? payload.message : unexplained(response.status),
       (payload.field as string | null | undefined) ?? null,
       (payload.problems as Problem[] | undefined) ?? [],
     );

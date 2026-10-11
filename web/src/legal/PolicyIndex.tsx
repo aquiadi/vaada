@@ -4,7 +4,7 @@ import { POLICY_LIST, type PolicySlug } from "./documents";
 /** The six documents, as a book's contents: a wrapped line on a phone, a column in the margin on a wide screen. */
 export function PolicyIndex({ current }: { current: PolicySlug }) {
   return (
-    <nav aria-label="Policies" className="no-print lg:sticky lg:top-8 lg:self-start">
+    <nav aria-label="Policy documents" className="no-print lg:sticky lg:top-8 lg:self-start">
       <p aria-hidden="true" className="label m-0 mb-2">
         Policies
       </p>
@@ -12,7 +12,7 @@ export function PolicyIndex({ current }: { current: PolicySlug }) {
         {POLICY_LIST.map((policy) => {
           const isCurrent = policy.slug === current;
           return (
-            <li key={policy.slug} className={`lg:border-l-2 lg:py-1.5 lg:pl-3 ${isCurrent ? "lg:border-bahi" : "lg:border-transparent"}`}>
+            <li key={policy.slug} className={`lg:border-l-2 lg:py-1.5 lg:pl-3 ${isCurrent ? "lg:border-ink" : "lg:border-transparent"}`}>
               <Link
                 to={policy.path}
                 aria-current={isCurrent ? "page" : undefined}

@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router";
-import { Button, Field, Notice, PageHeader, Waiting } from "../components/ui";
-import { ApiError, api } from "../lib/api";
+import { Button, Field, focusOnMount, Notice, PageHeader, Waiting } from "../components/ui";
+import { api } from "../lib/api";
 import { setPersonaSession, supabase } from "../lib/auth";
 import { useConfig } from "../lib/config";
+import { explain } from "../lib/errors";
 import { useMe } from "../lib/session";
 import type { Me } from "../lib/types";
 import { signInProblem } from "../pages/signInProblem";
@@ -31,7 +32,15 @@ function Slip({ children }: { children: ReactNode }) {
   );
 }
 
-function EmailStep({ next, googleEnabled, onSent }: { next: string; googleEnabled: boolean; onSent: (email: string) => void }) {
+interface EmailStepProps {
+  next: string;
+  googleEnabled: boolean;
+  /** Set when the person came back from the code step, whose form has just gone. */
+  takeFocus: boolean;
+  onSent: (email: string) => void;
+}
+
+function EmailStep({ next, googleEnabled, takeFocus, onSent }: EmailStepProps) {
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -76,6 +85,7 @@ function EmailStep({ next, googleEnabled, onSent }: { next: string; googleEnable
     <>
       <form onSubmit={send} noValidate>
         <Field
+          ref={takeFocus ? focusOnMount : undefined}
           id="login-email"
           label="Email address"
           type="email"
@@ -115,25 +125,35 @@ function CodeStep({ email, onSignedIn, onStartOver }: { email: string; onSignedI
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [verified, setVerified] = useState(false);
   const [resent, setResent] = useState<string | null>(null);
+
+  async function checkCode(): Promise<boolean> {
+    try {
+      const { error: failed } = await (await supabase()).auth.verifyOtp({ email, token: code, type: "email" });
+      if (failed) setError(signInProblem(failed, "verify"));
+      return !failed;
+    } catch (caught) {
+      setError(signInProblem(caught, "verify"));
+      return false;
+    }
+  }
 
   async function verify(event: FormEvent) {
     event.preventDefault();
-    if (!/^\d{6}$/.test(code)) {
+    if (!verified && !/^\d{6}$/.test(code)) {
       setError("The code is six digits. Type all six from the email.");
       return;
     }
     setBusy(true);
     setError(null);
     try {
-      const { error: failed } = await (await supabase()).auth.verifyOtp({ email, token: code, type: "email" });
-      if (failed) {
-        setError(signInProblem(failed, "verify"));
-        return;
-      }
+      // A code works once, so after it is accepted a second press only retries opening the account.
+      if (!verified && !(await checkCode())) return;
+      setVerified(true);
       await onSignedIn();
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : signInProblem(caught, "verify"));
+      setError(explain(caught, "The code was right, but we couldn’t open your account just now. Press Sign in again in a moment."));
     } finally {
       setBusy(false);
     }
@@ -154,6 +174,7 @@ function CodeStep({ email, onSignedIn, onStartOver }: { email: string; onSignedI
   return (
     <form onSubmit={verify} noValidate>
       <Field
+        ref={focusOnMount}
         id="login-code"
         label="Sign-in code"
         inputMode="numeric"
@@ -185,7 +206,7 @@ function CodeStep({ email, onSignedIn, onStartOver }: { email: string; onSignedI
   );
 }
 
-function NameStep({ onNamed }: { onNamed: (name: string) => Promise<void> }) {
+function NameStep({ takeFocus, onNamed }: { takeFocus: boolean; onNamed: (name: string) => Promise<void> }) {
   const [name, setName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -202,7 +223,7 @@ function NameStep({ onNamed }: { onNamed: (name: string) => Promise<void> }) {
     try {
       await onNamed(trimmed);
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Your name wasn’t saved. Try again.");
+      setError(explain(caught, "We couldn’t tell whether your name was saved. Try again."));
       setBusy(false);
     }
   }
@@ -210,6 +231,7 @@ function NameStep({ onNamed }: { onNamed: (name: string) => Promise<void> }) {
   return (
     <form onSubmit={save} noValidate>
       <Field
+        ref={takeFocus ? focusOnMount : undefined}
         id="login-name"
         label="Your name"
         autoComplete="name"
@@ -226,7 +248,8 @@ function NameStep({ onNamed }: { onNamed: (name: string) => Promise<void> }) {
   );
 }
 
-type Stage = { step: "email" } | { step: "code"; email: string } | { step: "name" };
+/** `returned` and an explicit name step mean the person moved here from another step, so focus follows them. */
+type Stage = { step: "email"; returned?: boolean } | { step: "code"; email: string } | { step: "name" };
 
 const HEADINGS = {
   email: { title: "Sign in", lede: "We’ll email you a six-digit code. There is no password to remember." },
@@ -235,6 +258,8 @@ const HEADINGS = {
     lede: "This name is written into every deed you draw up or accept, so use the one your clients know you by.",
   },
 };
+
+const PAGE = "mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14";
 
 export default function Login() {
   const [params] = useSearchParams();
@@ -246,7 +271,26 @@ export default function Login() {
   const me = useMe();
   const [stage, setStage] = useState<Stage>({ step: "email" });
 
-  if (me.isPending) return <Waiting />;
+  if (me.isPending) {
+    return (
+      <>
+        <title>Sign in · Vaada</title>
+        <Waiting />
+      </>
+    );
+  }
+  if (me.isError && !me.data) {
+    return (
+      <div className={PAGE}>
+        <title>Sign in · Vaada</title>
+        <PageHeader kicker="Your account" title="Sign in" />
+        <Notice tone="error">{explain(me.error, "We couldn’t check whether you’re already signed in.")}</Notice>
+        <Button tone="plain" className="mt-4" onClick={() => void me.refetch()}>
+          Try again
+        </Button>
+      </div>
+    );
+  }
   const signedIn = me.data ?? null;
   if (signedIn?.display_name && stage.step !== "name") return <Navigate to={next} replace />;
   const current: Stage = signedIn && !signedIn.display_name ? { step: "name" } : stage;
@@ -276,7 +320,8 @@ export default function Login() {
       : HEADINGS[current.step];
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
+    <div className={PAGE}>
+      <title>{`${current.step === "name" ? "Your name" : heading.title} · Vaada`}</title>
       <PageHeader kicker={current.step === "name" ? "One last thing" : "Your account"} title={heading.title} lede={heading.lede} />
       <div className="grid gap-10 lg:grid-cols-[minmax(0,36rem)_minmax(0,19rem)] lg:gap-16">
         <div>
@@ -290,12 +335,13 @@ export default function Login() {
               <EmailStep
                 next={next}
                 googleEnabled={config?.google_signin_enabled ?? false}
+                takeFocus={current.returned ?? false}
                 onSent={(email) => setStage({ step: "code", email })}
               />
             ) : current.step === "code" ? (
-              <CodeStep email={current.email} onSignedIn={afterSignIn} onStartOver={() => setStage({ step: "email" })} />
+              <CodeStep email={current.email} onSignedIn={afterSignIn} onStartOver={() => setStage({ step: "email", returned: true })} />
             ) : (
-              <NameStep onNamed={saveName} />
+              <NameStep takeFocus={stage.step === "name"} onNamed={saveName} />
             )}
           </Slip>
         </div>

@@ -1,6 +1,7 @@
 import { type ChangeEvent, type FormEvent, type InputHTMLAttributes, useState } from "react";
 import { Button, Field, Notice, SectionMark } from "../components/ui";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 import type { Payout } from "../lib/types";
 import {
   type BusinessType,
@@ -40,7 +41,7 @@ function BusinessTypeField({ value, error, onChange }: { value: BusinessType; er
           onChange={(e) => onChange(e.target.value === "proprietorship" ? "proprietorship" : "individual")}
           aria-invalid={error ? true : undefined}
           aria-describedby={`${id}-${error ? "error" : "hint"}`}
-          className={`w-full cursor-pointer appearance-none rounded-none border-0 border-b bg-transparent py-1.5 pr-6 pl-0 font-serif text-body text-ink outline-none transition-colors duration-150 focus:border-bahi focus-visible:outline-none ${error ? "border-bahi" : "border-[color-mix(in_srgb,var(--ink)_35%,transparent)]"}`}
+          className={`w-full cursor-pointer appearance-none rounded-none border-0 border-b bg-transparent py-1.5 pr-6 pl-0 font-serif text-body text-ink transition-colors duration-150 focus:border-b-2 focus:border-bahi focus:pb-[5px] ${error ? "border-bahi" : "border-[color-mix(in_srgb,var(--ink)_35%,transparent)]"}`}
         >
           <option value="individual">Individual</option>
           <option value="proprietorship">Sole proprietorship</option>
@@ -50,7 +51,7 @@ function BusinessTypeField({ value, error, onChange }: { value: BusinessType; er
         </span>
       </div>
       {error ? (
-        <p id={`${id}-error`} className="m-0 text-note text-bahi">
+        <p id={`${id}-error`} role="alert" className="m-0 border-l-2 border-bahi pl-2 text-note text-ink">
           {error}
         </p>
       ) : (
@@ -128,11 +129,8 @@ export function PayoutFormSheet({ previous, lastSent, onSaved }: Props) {
         const marked = { [caught.field]: caught.code === "invalid" ? FIELD_PROBLEM[caught.field] : caught.message };
         setProblems(marked);
         focusFirst(marked);
-      } else if (caught instanceof ApiError) {
-        setFormError(caught.message);
       } else {
-        console.error("payout setup failed", caught);
-        setFormError("Your details didn’t reach Razorpay, and nothing was saved. Try again in a moment.");
+        setFormError(explain(caught, "We couldn’t tell whether your details reached Razorpay. Reload the page to see where things stand."));
       }
     } finally {
       setBusy(false);

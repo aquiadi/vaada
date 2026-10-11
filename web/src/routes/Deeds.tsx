@@ -4,10 +4,12 @@ import { SignInFirst } from "../books/SignInFirst";
 import { Button, ButtonLink, Notice, PageHeader, Rupees, Waiting } from "../components/ui";
 import { deedNumber } from "../design/DeedSheet";
 import { ApiError, api } from "../lib/api";
+import { explain } from "../lib/errors";
 import type { DealStatus, DealSummary } from "../lib/types";
 import { dayOf } from "../room/words";
 
 const PAGE = "mx-auto max-w-4xl px-4 py-10 sm:px-6";
+const TITLE = <title>Index of deeds · Vaada</title>;
 
 const UNDER_WAY: ReadonlySet<DealStatus> = new Set(["published", "accepted", "funded", "active", "disputed"]);
 const CLOSED: ReadonlySet<DealStatus> = new Set(["completed", "cancelled", "lapsed"]);
@@ -119,17 +121,21 @@ export default function Deeds() {
 
   if (query.isError && query.error instanceof ApiError && query.error.status === 401) {
     return (
-      <SignInFirst
-        kicker="Index"
-        title="Sign in to see your deeds"
-        lede="Your index lists every deed you have drawn up, and every deed a Maker has sent you."
-        next="/deeds"
-      />
+      <>
+        {TITLE}
+        <SignInFirst
+          kicker="Index"
+          title="Sign in to see your deeds"
+          lede="Your index lists every deed you have drawn up, and every deed a Maker has sent you."
+          next="/deeds"
+        />
+      </>
     );
   }
 
   return (
     <div className={PAGE}>
+      {TITLE}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <PageHeader kicker="Index" title="Index of deeds" lede="Every deed you are party to, by number, newest first." />
         <ButtonLink to="/new" className="no-print mb-8 self-start sm:self-auto">
@@ -139,7 +145,7 @@ export default function Deeds() {
       {query.isPending ? <Waiting>Opening the index.</Waiting> : null}
       {query.isError ? (
         <div>
-          <Notice tone="error">{query.error instanceof ApiError ? query.error.message : "The index didn’t load. Try again in a moment."}</Notice>
+          <Notice tone="error">{explain(query.error, "The index didn’t load. Try again in a moment.")}</Notice>
           <Button tone="plain" className="mt-4" onClick={() => void query.refetch()}>
             Try again
           </Button>

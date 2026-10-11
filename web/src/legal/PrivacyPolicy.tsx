@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
-import { Clause, Items, Placeholder, PolicySheet } from "./PolicySheet";
+import { LegalEntity } from "./OwnerDetails";
+import { Clause, Items, PolicySheet } from "./PolicySheet";
 import { YourData } from "./YourData";
 
 interface Holding {
@@ -30,6 +31,12 @@ const HOLDINGS: Holding[] = [
     what: "When a client accepts a deed: the name they typed, their email address, the time, their IP address and their browser.",
     why: "Evidence that the contract was made, should either party ever need to show it.",
     kept: "As long as the deed itself. They are not removed when an account is deleted.",
+  },
+  {
+    name: "Letters we send you",
+    what: "A copy of each email we send you: the address it went to, its subject and its text.",
+    why: "To send it again if delivery fails, and to show what you were told and when.",
+    kept: "Until you delete your account.",
   },
   {
     name: "Dictations and updates",
@@ -90,7 +97,7 @@ export function PrivacyPolicy() {
     <PolicySheet slug="privacy" lede="What we collect, why we need it, how long we keep it, and how to take it with you or have it deleted.">
       <Clause n={1} title="Who is responsible">
         <p>
-          <Placeholder>Legal entity name to be added</Placeholder>, which operates Vaada, is the data fiduciary for the personal data
+          <LegalEntity />, which operates Vaada, is the data fiduciary for the personal data
           described here, under the Digital Personal Data Protection Act, 2023. Questions and complaints about your data go to our
           grievance officer, whose details are on the <Link to="/legal/contact">contact page</Link>.
         </p>
@@ -164,7 +171,12 @@ export function PrivacyPolicy() {
         </p>
         <Items
           items={[
-            <>removes your email address, phone number, display name and handle, and marks the account deleted;</>,
+            <>removes your email address, phone number, display name and handle from your account, and marks it deleted;</>,
+            <>deletes your sign-in record, which holds your email address too;</>,
+            <>
+              removes the letters we sent you, with the address they went to, their subject and their text, and stops any not yet
+              sent;
+            </>,
             <>unlinks your maker id, so registry entries can no longer be tied to you;</>,
             <>deletes the drafts you never sent and the text of your dictations;</>,
             <>removes the name on your payout account.</>,
@@ -173,7 +185,10 @@ export function PrivacyPolicy() {
         <p>What stays, and why:</p>
         <Items
           items={[
-            <>deeds you sent or accepted, exactly as written, names included, because the other party is entitled to their copy;</>,
+            <>
+              deeds you sent or accepted, exactly as written, names included, with the email address each was sent to, because the
+              other party is entitled to their copy;
+            </>,
             <>acceptances, with the typed name, email address, time and IP address, as evidence that a contract was made;</>,
             <>
               the ledger and payment records, for {LAW_REQUIRES}, attached to an account that no longer says whose it was;
