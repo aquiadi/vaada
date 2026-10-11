@@ -1,11 +1,15 @@
 """People: first sign-in, profile, export and deletion."""
 
+import logging
 import re
 import secrets
+import uuid
 from typing import Any
 
-from sqlalchemy import func, inspect, or_, select
+import httpx
+from sqlalchemy import func, inspect, or_, select, update
 from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from vaada.auth import Identity
 from vaada.context import AppContext
@@ -19,12 +23,16 @@ from vaada.models import (
     Dispute,
     LedgerEntry,
     Milestone,
+    OutboundEmail,
+    Payment,
     PayoutAccount,
     User,
     VoiceUpdate,
 )
-from vaada.models.enums import DealStatus, MilestoneStatus
+from vaada.models.enums import DealStatus, EmailStatus, MilestoneStatus
 from vaada.money.errors import ForbiddenError, MoneyError
+
+log = logging.getLogger(__name__)
 
 OPEN_MONEY = frozenset(
     {
@@ -98,6 +106,8 @@ async def update_profile(ctx: AppContext, user: User, *, display_name: str | Non
 
 
 async def export_data(ctx: AppContext, user: User) -> dict[str, Any]:
+    """Everything about this person, and the deeds as both parties already see them. Not the other party's
+    personal details: their acceptance evidence, a Maker's private draft and the Maker's books stay out."""
     async with ctx.sessions() as session:
         deals = (
             (await session.execute(select(Deal).where(or_(Deal.freelancer_id == user.id, Deal.client_id == user.id))))
@@ -105,6 +115,8 @@ async def export_data(ctx: AppContext, user: User) -> dict[str, Any]:
             .all()
         )
         deal_ids = [d.id for d in deals]
+        made = [d.id for d in deals if d.freelancer_id == user.id]
+        paid_for = [d.id for d in deals if d.client_id == user.id]
         payout = (
             await session.execute(select(PayoutAccount).where(PayoutAccount.user_id == user.id))
         ).scalar_one_or_none()
@@ -113,6 +125,26 @@ async def export_data(ctx: AppContext, user: User) -> dict[str, Any]:
             found = (await session.execute(select(model).where(*where))).scalars().all()
             columns = inspect(model).column_attrs
             return [{c.key: getattr(r, c.key) for c in columns} for r in found]
+
+        def deed(d: Deal) -> dict[str, Any]:
+            mine = d.freelancer_id == user.id
+            return {
+                "id": d.id,
+                "deed_no": d.deed_no,
+                "role": "maker" if mine else "client",
+                "status": d.status,
+                "title": d.title,
+                "agreement": d.terms,
+                "agreement_hash": d.agreement_hash,
+                "struck_clauses": d.struck_clauses,
+                "published_at": d.published_at,
+                "accepted_at": d.accepted_at,
+                "funded_at": d.funded_at,
+                "completed_at": d.completed_at,
+                "cancelled_at": d.cancelled_at,
+                "lapsed_at": d.lapsed_at,
+                **({"draft": d.draft} if mine else {}),
+            }
 
         return {
             "profile": {
@@ -136,10 +168,11 @@ async def export_data(ctx: AppContext, user: User) -> dict[str, Any]:
                 if payout
                 else None
             ),
-            "deeds": await rows(Deal, Deal.id.in_(deal_ids)),
+            "deeds": [deed(d) for d in deals],
             "milestones": await rows(Milestone, Milestone.deal_id.in_(deal_ids)),
-            "acceptances": await rows(Acceptance, Acceptance.deal_id.in_(deal_ids)),
-            "ledger": await rows(LedgerEntry, LedgerEntry.deal_id.in_(deal_ids)),
+            "acceptances": await rows(Acceptance, Acceptance.user_id == user.id),
+            "payments": await rows(Payment, Payment.deal_id.in_(paid_for)),
+            "ledger": await rows(LedgerEntry, LedgerEntry.deal_id.in_(made)),
             "register": await rows(DealEvent, DealEvent.deal_id.in_(deal_ids)),
             "dictations": await rows(Dictation, Dictation.user_id == user.id),
             "voice_updates": await rows(VoiceUpdate, VoiceUpdate.user_id == user.id),
@@ -148,25 +181,57 @@ async def export_data(ctx: AppContext, user: User) -> dict[str, Any]:
         }
 
 
-async def delete_account(ctx: AppContext, user: User) -> None:
-    """Anonymises the person and unlinks their maker_id. Money records the law makes us keep stay,
-    attached to an account that no longer says who it was. Drafts and dictations go."""
-    async with transaction(ctx.sessions) as session:
-        stored = await session.get(User, user.id, with_for_update=True)
-        assert stored is not None
-        open_money = await session.scalar(
+async def _open_money(session: AsyncSession, user_id: uuid.UUID) -> int:
+    return int(
+        await session.scalar(
             select(func.count())
             .select_from(Milestone)
             .join(Deal, Deal.id == Milestone.deal_id)
-            .where(
-                or_(Deal.freelancer_id == user.id, Deal.client_id == user.id),
-                Milestone.status.in_(OPEN_MONEY),
-            )
+            .where(or_(Deal.freelancer_id == user_id, Deal.client_id == user_id), Milestone.status.in_(OPEN_MONEY))
         )
-        if open_money:
-            raise MoneyError(
-                "Money is still held on one of your deeds. Once it's released or refunded, you can delete your account."
-            )
+        or 0
+    )
+
+
+MONEY_STILL_HELD = (
+    "Money is still held on one of your deeds. Once it's released or refunded, you can delete your account."
+)
+
+
+async def _delete_sign_in(ctx: AppContext, user: User) -> None:
+    """Removes the person's Supabase Auth record, which holds their email. Without a service key (dev) or for a
+    persona there is none to remove."""
+    key = ctx.settings.supabase_service_role_key
+    if not key or user.is_persona:
+        return
+    url = f"{ctx.settings.supabase_url.rstrip('/')}/auth/v1/admin/users/{user.id}"
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            response = await client.delete(url, headers={"apikey": key, "Authorization": f"Bearer {key}"})
+    except httpx.HTTPError as exc:
+        raise MoneyError(
+            "We couldn't reach our sign-in service, so nothing was deleted. Try again.", status_code=502
+        ) from exc
+    if response.status_code not in (200, 204, 404):
+        log.error("deleting auth user %s failed: %s", user.id, response.status_code)
+        raise MoneyError(
+            "Our sign-in service refused the deletion, so nothing was deleted. Try again later.", status_code=502
+        )
+
+
+async def delete_account(ctx: AppContext, user: User) -> None:
+    """Anonymises the person and unlinks their maker_id. Money records the law makes us keep stay,
+    attached to an account that no longer says who it was. Drafts, dictations, the letters we sent them and
+    their sign-in record go."""
+    async with ctx.sessions() as session:
+        if await _open_money(session, user.id):
+            raise MoneyError(MONEY_STILL_HELD)
+    await _delete_sign_in(ctx, user)
+    async with transaction(ctx.sessions) as session:
+        stored = await session.get(User, user.id, with_for_update=True)
+        assert stored is not None
+        if await _open_money(session, user.id):
+            raise MoneyError(MONEY_STILL_HELD)
         drafts = (
             (await session.execute(select(Deal).where(Deal.freelancer_id == user.id, Deal.status == DealStatus.DRAFT)))
             .scalars()
@@ -176,6 +241,18 @@ async def delete_account(ctx: AppContext, user: User) -> None:
             await session.delete(draft)
         for dictation in (await session.execute(select(Dictation).where(Dictation.user_id == user.id))).scalars():
             await session.delete(dictation)
+        if stored.email:
+            addressed = func.lower(OutboundEmail.to_email) == stored.email.lower()
+            await session.execute(
+                update(OutboundEmail)
+                .where(addressed, OutboundEmail.status == EmailStatus.QUEUED)
+                .values(status=EmailStatus.FAILED, last_error="The account was deleted before this was sent.")
+            )
+            await session.execute(
+                update(OutboundEmail)
+                .where(addressed)
+                .values(to_email="removed", subject="Removed when the account was deleted", html=None, text_body=None)
+            )
         stored.email = None
         stored.phone = None
         stored.display_name = None

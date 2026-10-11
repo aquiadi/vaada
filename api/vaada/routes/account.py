@@ -16,6 +16,7 @@ from vaada.ratelimit import rate_limit
 
 router = APIRouter()
 AuthLimit = Annotated[None, Depends(rate_limit("auth", times=30, seconds=60))]
+ConfigLimit = Annotated[None, Depends(rate_limit("config", times=120, seconds=60))]
 
 
 @router.get("/health")
@@ -24,7 +25,7 @@ async def health() -> dict[str, str]:
 
 
 @router.get("/config")
-async def config(ctx: Ctx) -> dict[str, Any]:
+async def config(ctx: Ctx, _: ConfigLimit) -> dict[str, Any]:
     s = ctx.settings
     now = ctx.clock.now()
     return {
@@ -36,7 +37,14 @@ async def config(ctx: Ctx) -> dict[str, Any]:
         "persona_switcher": s.persona_switcher_enabled,
         "dev_tools": s.dev_tools_enabled,
         "new_deals_paused": s.new_deals_paused,
-        "contact": {"address": s.contact_address, "phone": s.contact_phone, "email": s.support_email},
+        "contact": {
+            "address": s.contact_address,
+            "phone": s.contact_phone,
+            "email": s.support_email,
+            "legal_entity": s.legal_entity,
+            "grievance_officer": s.grievance_officer,
+            "jurisdiction_city": s.jurisdiction_city,
+        },
         "gateway": ctx.gateway.kind,
         "chain_id": s.chain_id,
         "registry_address": s.registry_address or None,

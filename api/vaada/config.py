@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     supabase_url: str
     supabase_anon_key: str = ""
     supabase_jwt_audience: str = "authenticated"
+    supabase_service_role_key: str = ""
     google_signin_enabled: bool = False
 
     persona_switcher_enabled: bool = False
@@ -85,6 +86,9 @@ class Settings(BaseSettings):
     contact_address: str = ""
     contact_phone: str = ""
     support_email: str = ""
+    legal_entity: str = ""
+    grievance_officer: str = ""
+    jurisdiction_city: str = ""
     sentry_dsn: str = ""
     rate_limit_enabled: bool = True
     log_level: str = "INFO"

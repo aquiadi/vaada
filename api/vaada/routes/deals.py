@@ -1,9 +1,10 @@
+import re
 import uuid
 from datetime import date
 from typing import Any
 
 from fastapi import APIRouter, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import or_, select
 
 from vaada import deals, voice
@@ -37,8 +38,18 @@ class CorrectedBody(BaseModel):
     value: Any
 
 
+EMAIL = re.compile(r"^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$")
+
+
 class PublishBody(BaseModel):
-    client_email: str = Field(pattern=r"^[^\s@]+@[^\s@]+\.[A-Za-z]{2,}$", max_length=254)
+    client_email: str = Field(max_length=254)
+
+    @field_validator("client_email")
+    @classmethod
+    def _looks_like_email(cls, v: str) -> str:
+        if not EMAIL.match(v.strip()):
+            raise ValueError("That doesn't look like an email address. Check it and try again.")
+        return v.strip()
 
 
 class ReasonBody(BaseModel):
@@ -61,7 +72,7 @@ class DateChangeBody(BaseModel):
 class VoiceBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     raw_text: str = Field(min_length=1, max_length=2000)
-    proposed_actions: list[dict[str, Any]] = Field(max_length=12)
+    proposed_actions: list[voice.Action] = Field(max_length=12)
 
 
 class ApplyBody(BaseModel):

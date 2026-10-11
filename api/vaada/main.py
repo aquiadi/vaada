@@ -54,6 +54,11 @@ def install_handlers(app: FastAPI) -> None:
     @app.exception_handler(RequestValidationError)
     async def validation(_: Request, exc: RequestValidationError) -> JSONResponse:
         errors = list(exc.errors())
+        # An id in the address that can't be one (a truncated link) means there's nothing there.
+        if any(e.get("loc", ())[:1] == ("path",) for e in errors):
+            return JSONResponse(
+                status_code=404, content={"error": "not_found", "message": "That doesn't exist, or you can't see it."}
+            )
         field = next((str(e["loc"][-1]) for e in errors if e.get("loc")), None)
         return JSONResponse(status_code=422, content={"error": "invalid", "message": _friendly(errors), "field": field})
 

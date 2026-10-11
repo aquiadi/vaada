@@ -1,18 +1,21 @@
 """Deal terms. The browser normalizes dictation into blank values; this module re-validates every
 value and every rule before anything is frozen."""
 
+import re
 from datetime import date, datetime
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StrictInt, ValidationError, field_validator, model_validator
 
 from vaada.agreement import AGREEMENT_VERSION, end_of_day_ist, iso_utc, money
+from vaada.format import rupees
 from vaada.money.fees import DealMoney
 
 OPTIONAL_CLAUSES = ("late_fee", "kill_fee", "ip_transfer")
 STRIKABLE = (*OPTIONAL_CLAUSES, "client_organisation")
 MAX_MILESTONES = 12
 MAX_REVISIONS = 20
+REVISIONS_PROBLEM = f"A deed can promise up to {MAX_REVISIONS} rounds of revision, or unlimited. Say a smaller number."
 
 Paise = Annotated[StrictInt, Field(gt=0, le=10_000_000_000)]
 ShortText = Annotated[str, Field(min_length=1, max_length=160)]
@@ -58,19 +61,25 @@ class Terms(Strict):
     def _sums_and_order(self) -> "Terms":
         total = sum(m.amount_paise for m in self.milestones)
         if total != self.total_paise:
-            raise ValueError(f"milestones add up to {total} paise but the total is {self.total_paise} paise")
+            raise ValueError(f"The parts add up to {rupees(total)}, but the total is {rupees(self.total_paise)}.")
         dates = [m.due_date for m in self.milestones]
         if dates != sorted(dates):
-            raise ValueError("milestone due dates must not go backwards")
+            raise ValueError("The due dates go backwards: each part has to be due on or after the one before it.")
         return self
+
+
+BLANK_KEY = re.compile(
+    r"^(maker_name|client_name|client_organisation|work|revisions|total|plan|late_fee\.days|late_fee\.amount"
+    r"|kill_fee\.percent|ip_transfer\.exclusions|milestones\.(?:[1-9]|1[0-2])\.(?:title|amount|deliverables|due))$"
+)
 
 
 class BlankValue(BaseModel):
     model_config = ConfigDict(extra="ignore")
-    raw: str = ""
+    raw: Annotated[str, Field(max_length=2000)] = ""
     value: Any = None
     confidence: Literal["exact", "inferred", "failed"] | None = None
-    note: str | None = None
+    note: Annotated[str, Field(max_length=500)] | None = None
     source: Literal["dictation", "plan"] | None = None
     dictationId: str | None = None
 
@@ -79,9 +88,17 @@ class Draft(BaseModel):
     """What the deed editor autosaves: every blank as the person left it."""
 
     model_config = ConfigDict(extra="forbid")
-    blanks: dict[str, BlankValue] = Field(default_factory=dict)
+    blanks: Annotated[dict[str, BlankValue], Field(max_length=11 + 4 * MAX_MILESTONES)] = Field(default_factory=dict)
     struck: list[str] = Field(default_factory=list)
     milestone_count: Annotated[int, Field(ge=0, le=MAX_MILESTONES)] = 0
+
+    @field_validator("blanks")
+    @classmethod
+    def _known_blanks(cls, v: dict[str, BlankValue]) -> dict[str, BlankValue]:
+        unknown = [k for k in v if not BLANK_KEY.match(k)]
+        if unknown:
+            raise ValueError(f"unknown blanks {sorted(unknown)[:5]}")
+        return v
 
     @field_validator("struck")
     @classmethod
@@ -175,7 +192,11 @@ def terms_from_draft(draft: Draft) -> Terms:
             **clauses,
         )
     except ValidationError as exc:
-        raise TermsProblems([_problem_from_error(err) for err in exc.errors()]) from exc
+        first_per_blank: dict[str, Problem] = {}
+        for err in exc.errors():
+            problem = _problem_from_error(err)
+            first_per_blank.setdefault(problem.blank, problem)
+        raise TermsProblems(list(first_per_blank.values())) from exc
 
 
 def _problem_from_error(err: Any) -> Problem:
@@ -189,6 +210,8 @@ def _problem_from_error(err: Any) -> Problem:
         blank = blank_names.get(loc[0], loc[0])
     else:
         blank = "plan"
+    if blank == "revisions":
+        return Problem(blank=blank, message=REVISIONS_PROBLEM)
     message = str(err.get("msg", "Check this blank.")).removeprefix("Value error, ")
     return Problem(blank=blank, message=message[:1].upper() + message[1:])
 

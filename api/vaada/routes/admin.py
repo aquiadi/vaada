@@ -232,6 +232,11 @@ async def retry_refund(milestone_id: uuid.UUID, ctx: Ctx, _: AdminUser) -> dict[
     return {"completed": outcome.completed, "message": outcome.message}
 
 
+@router.post("/milestones/{milestone_id}/retry-release")
+async def retry_release(milestone_id: uuid.UUID, ctx: Ctx, _: AdminUser) -> dict[str, str]:
+    return {"message": await refunds.retry_release(ctx, milestone_id)}
+
+
 @router.post("/flags/{flag_id}/resolve", status_code=204)
 async def resolve_flag(flag_id: uuid.UUID, body: FlagBody, ctx: Ctx, admin: AdminUser) -> Response:
     async with transaction(ctx.sessions) as session:

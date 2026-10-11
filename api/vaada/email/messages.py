@@ -90,7 +90,7 @@ def deed_sent(d: DealFacts, *, total_paise: int, client_fee_paise: int, first_du
         paragraphs=[
             f"It's Deed No. {d.no}, for {d.title}. Read it through, and if it's right, accept it and pay. "
             "The money is held by Razorpay and only reaches "
-            f"{d.maker} as each part of the work is approved, or five days after it's delivered.",
+            f"{d.maker} as each part of the work is approved, or once its review period after delivery ends.",
             f"The deed can be accepted until {ist_day(first_due)}.",
         ],
         rows=[
@@ -125,7 +125,8 @@ def deal_funded(d: DealFacts, *, role: str, total_paise: int, first_due: datetim
     else:
         paragraphs = [
             f"Your payment went through. {rupees(total_paise)} is held by Razorpay and goes to {d.maker} "
-            "one milestone at a time, as you approve the work or five days after each delivery." + d.fee_not_refunded,
+            "one milestone at a time, as you approve the work or once its review period after delivery ends."
+            + d.fee_not_refunded,
         ]
     return Message(
         subject=f"The money for Deed No. {d.no} is held",
@@ -141,7 +142,7 @@ def milestone_delivered(
 ) -> Message:
     paragraphs = [
         f"{d.maker} has marked {m.label} as delivered." + (f" Their note: “{note}”" if note else ""),
-        f"If you're happy with it, approve it and {rupees(m.amount_paise)} goes to {d.maker}. {SETTLEMENT}",
+        f"If you're happy with it, approve it and {rupees(m.transfer_paise)} goes to {d.maker}. {SETTLEMENT}",
         f"If you do nothing, Razorpay releases the money on {ist_moment(hold_until)}.",
         f"If something is wrong, you can raise a dispute until {ist_moment(review_ends_at)}. "
         "After that moment disputes for this milestone are closed.",
@@ -162,7 +163,7 @@ def review_closing(d: DealFacts, m: MilestoneFacts, *, review_ends_at: datetime,
         deed_no=d.no,
         paragraphs=[
             f"You can raise a dispute about {m.label} until {ist_moment(review_ends_at)}.",
-            f"If you don't, {rupees(m.amount_paise)} releases to {d.maker} on {ist_moment(hold_until)}.",
+            f"If you don't, {rupees(m.transfer_paise)} releases to {d.maker} on {ist_moment(hold_until)}.",
         ],
         action=Action("Open the deal room", d.room_url),
     )
@@ -173,7 +174,7 @@ def milestone_released(d: DealFacts, m: MilestoneFacts, *, role: str, why: str, 
     if role == "maker":
         lead = f"{rupees(m.transfer_paise)} for {m.label} is released to your bank account{account}."
     else:
-        lead = f"{rupees(m.amount_paise)} for {m.label} is released to {d.maker}."
+        lead = f"{rupees(m.transfer_paise)} for {m.label} is released to {d.maker}."
     return Message(
         subject=f"Milestone {roman(m.idx)} of Deed No. {d.no} is released",
         heading="Released.",

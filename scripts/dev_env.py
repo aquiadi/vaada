@@ -29,9 +29,10 @@ def supabase_values(status_path: Path) -> dict[str, str]:
     api_url = status.get("API_URL") or status.get("api_url")
     key = status.get("PUBLISHABLE_KEY") or status.get("ANON_KEY") or status.get("anon_key")
     db_url = status.get("DB_URL") or status.get("db_url")
+    service_key = status.get("SECRET_KEY") or status.get("SERVICE_ROLE_KEY") or status.get("service_role_key") or ""
     if not (api_url and key and db_url):
         raise SystemExit(f"supabase status is missing API_URL, a publishable/anon key or DB_URL: {sorted(status)}")
-    return {"SUPABASE_URL": api_url, "SUPABASE_ANON_KEY": key, "DATABASE_URL": db_url}
+    return {"SUPABASE_URL": api_url, "SUPABASE_ANON_KEY": key, "SUPABASE_SERVICE_ROLE_KEY": service_key, "DATABASE_URL": db_url}
 
 
 def registry_address() -> str:

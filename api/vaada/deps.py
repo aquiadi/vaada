@@ -28,22 +28,30 @@ def _bearer(authorization: str | None) -> str | None:
     return token.strip() if scheme.lower() == "bearer" and token.strip() else None
 
 
-async def optional_user(
-    ctx: Ctx,
-    verifier: Annotated[TokenVerifier, Depends(get_verifier)],
-    authorization: Annotated[str | None, Header()] = None,
-) -> User | None:
+Verifier = Annotated[TokenVerifier, Depends(get_verifier)]
+Authorization = Annotated[str | None, Header()]
+
+
+async def _signed_in(ctx: AppContext, verifier: TokenVerifier, authorization: str | None) -> User | None:
     token = _bearer(authorization)
     if token is None:
         return None
+    return await ensure_user(ctx, await verifier.verify(token))
+
+
+async def optional_user(ctx: Ctx, verifier: Verifier, authorization: Authorization = None) -> User | None:
+    """Public pages read the same with a stale token as without one: a deed link must open for anyone."""
     try:
-        identity = await verifier.verify(token)
+        return await _signed_in(ctx, verifier, authorization)
+    except AuthError:
+        return None
+
+
+async def current_user(ctx: Ctx, verifier: Verifier, authorization: Authorization = None) -> User:
+    try:
+        user = await _signed_in(ctx, verifier, authorization)
     except AuthError as exc:
         raise HTTPException(status_code=401, detail="Your sign-in has expired. Sign in again.") from exc
-    return await ensure_user(ctx, identity)
-
-
-async def current_user(user: Annotated[User | None, Depends(optional_user)]) -> User:
     if user is None:
         raise HTTPException(status_code=401, detail="Sign in to do that.")
     return user

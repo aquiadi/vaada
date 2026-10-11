@@ -169,11 +169,14 @@ async def run_refund(ctx: AppContext, deal_id: uuid.UUID, milestone_id: uuid.UUI
     released_transfer = None
     if intent.release_rest and release_paise > 0:
         try:
-            released_transfer = await ctx.gateway.set_transfer_hold(
-                milestone.razorpay_transfer_id, on_hold=False, until=None
-            )
+            transfer = await ctx.gateway.set_transfer_hold(milestone.razorpay_transfer_id, on_hold=False, until=None)
         except GatewayError as exc:
-            await _stuck(ctx, deal_id, milestone, f"Refund done, but releasing the rest failed: {exc}", step="release")
+            await _release_stuck(ctx, deal_id, milestone, f"Refund done, but releasing the rest failed: {exc}")
+        else:
+            if transfer.on_hold:
+                await _release_stuck(ctx, deal_id, milestone, "Refund done, but Razorpay still shows the rest on hold.")
+            else:
+                released_transfer = transfer
 
     await _record_refund(
         ctx,
@@ -282,6 +285,82 @@ async def _record_refund(
         )
         for to in (maker_email, client_email):
             queue_email(session, to=to, template="milestone_refunded", deal_id=deal.id, message=message)
+
+
+async def _release_stuck(ctx: AppContext, deal_id: uuid.UUID, milestone: Milestone, reason: str) -> None:
+    """Its own kind of flag: recording the refund closes refund_stuck flags, and this one must stay open until
+    the Maker's share is confirmed released."""
+    sentry_sdk.capture_message(f"release stuck after refund for milestone {milestone.id}: {reason}", level="error")
+    log.error("release stuck after refund for milestone %s", milestone.id)
+    async with transaction(ctx.sessions) as session:
+        await raise_flag(
+            session,
+            deal_id=deal_id,
+            milestone_id=milestone.id,
+            kind=FlagKind.RELEASE_STUCK,
+            summary=f"Milestone {milestone.idx}: {reason}",
+            detail={"transfer_id": milestone.razorpay_transfer_id},
+            at=ctx.clock.now(),
+        )
+
+
+async def retry_release(ctx: AppContext, milestone_id: uuid.UUID) -> str:
+    """Admin: release what's left of a transfer after a refund, once Razorpay confirms the hold is off."""
+    async with ctx.sessions() as session:
+        milestone = await load_milestone(session, milestone_id)
+    async with deal_lock(ctx.engine, milestone.deal_id):
+        async with ctx.sessions() as session:
+            milestone = await load_milestone(session, milestone_id)
+            flag = (
+                await session.execute(
+                    select(ReconciliationFlag).where(
+                        ReconciliationFlag.milestone_id == milestone.id,
+                        ReconciliationFlag.kind == FlagKind.RELEASE_STUCK,
+                        ReconciliationFlag.resolved_at.is_(None),
+                    )
+                )
+            ).scalar_one_or_none()
+        if flag is None or not milestone.razorpay_transfer_id:
+            return "Nothing is waiting to be released on this milestone."
+        try:
+            transfer = await ctx.gateway.set_transfer_hold(milestone.razorpay_transfer_id, on_hold=False, until=None)
+        except GatewayError as exc:
+            raise MoneyError(f"Razorpay didn't release it: {exc}", status_code=502, code="release_failed") from exc
+        if transfer.on_hold:
+            raise MoneyError("Razorpay still shows the money on hold. Try again later.", status_code=502)
+        release_paise = transfer.amount_paise - transfer.amount_reversed_paise
+        async with transaction(ctx.sessions) as session:
+            deal = await load_deal(session, milestone.deal_id, lock=True)
+            stored = next(m for m in deal.milestones if m.id == milestone.id)
+            now = ctx.clock.now()
+            stored.released_at = now
+            await ledger.record(
+                session,
+                deal_id=deal.id,
+                milestone_id=stored.id,
+                kind=LedgerKind.RELEASED,
+                amount_paise=release_paise,
+                razorpay_object_id=transfer.id,
+                key=f"released:{transfer.id}",
+                at=now,
+                note="The Maker's share, released for the next settlement.",
+            )
+            await session.execute(
+                update(ReconciliationFlag)
+                .where(ReconciliationFlag.id == flag.id)
+                .values(resolved_at=now, resolution_note="Released on a later attempt.")
+            )
+            facts = await deal_facts(session, ctx.settings, deal)
+            await register.log(
+                session,
+                deal_id=deal.id,
+                milestone_id=stored.id,
+                kind="released",
+                summary=f"{rupees(release_paise)} for milestone {roman(stored.idx)} released to {facts.maker}.",
+                role=Role.SYSTEM,
+                at=now,
+            )
+    return f"{rupees(release_paise)} released for the next settlement."
 
 
 async def _stuck(ctx: AppContext, deal_id: uuid.UUID, milestone: Milestone, reason: str, *, step: str) -> None:

@@ -75,6 +75,9 @@ def milestone_actions(
     live = deal.status not in (DealStatus.CANCELLED, DealStatus.LAPSED)
     actions: list[dict[str, str]] = []
     amount = rupees(m.amount_paise)
+    to_maker = rupees(m.transfer_paise) + (
+        f" (the {amount} part less Vaada's fee and any tax withheld)" if m.transfer_paise != m.amount_paise else ""
+    )
     if role == Role.MAKER and m.status == MilestoneStatus.HELD and live:
         review_ends = now + timedelta(days=s.review_window_days)
         release = review_ends + timedelta(hours=s.hold_buffer_hours)
@@ -84,7 +87,8 @@ def milestone_actions(
                 "label": "Mark delivered",
                 "effect": f"This tells {first_name(client)} that milestone {roman(m.idx)} is delivered. "
                 f"They can raise a problem until about {ist_moment(review_ends)}; if they don't, Razorpay releases "
-                f"{rupees(m.transfer_paise)} to your {account} on about {ist_moment(release)}.",
+                f"{rupees(m.transfer_paise)} on about {ist_moment(release)}, "
+                f"for its next settlement to your {account}.",
             }
         )
     if role == Role.CLIENT and m.status == MilestoneStatus.DELIVERED:
@@ -92,7 +96,7 @@ def milestone_actions(
             {
                 "action": "approve",
                 "label": "Approve and release",
-                "effect": f"This releases {amount} to {possessive(first_name(maker))} {account} on the next "
+                "effect": f"This releases {to_maker} to {possessive(first_name(maker))} {account} on the next "
                 "settlement. It can't be undone.",
             }
         )
@@ -211,7 +215,7 @@ async def deal_room(ctx: AppContext, deal: Deal, viewer: User) -> dict[str, Any]
             (
                 await session.execute(
                     select(VoiceUpdate)
-                    .where(VoiceUpdate.deal_id == deal.id)
+                    .where(VoiceUpdate.deal_id == deal.id, VoiceUpdate.user_id == viewer.id)
                     .order_by(VoiceUpdate.created_at.desc())
                     .limit(20)
                 )

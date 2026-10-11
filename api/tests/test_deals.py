@@ -1,4 +1,5 @@
 import json
+import re
 from datetime import timedelta
 
 import pytest
@@ -83,7 +84,7 @@ async def test_milestones_must_add_up_to_the_total(ctx: AppContext) -> None:
     draft = draft_for(ctx, [Part(1_250_000, 10), Part(1_250_000, 20)]).model_dump()
     draft["blanks"]["total"]["value"] = 2_400_000
     deal = await deals.create_draft(ctx, maker, Draft.model_validate(draft))
-    with pytest.raises(TermsProblems, match="add up to 2500000 paise but the total is 2400000"):
+    with pytest.raises(TermsProblems, match=re.escape("The parts add up to ₹25,000, but the total is ₹24,000.")):
         await deals.publish(ctx, deal.id, maker, "rahul@example.com")
 
 
@@ -181,3 +182,24 @@ async def test_opening_a_new_deed_reuses_one_never_written_in(ctx: AppContext) -
     assert second.id != first.id
     filled = await deals.create_draft(ctx, maker, draft_for(ctx, [Part(2_500_000, 10)]))
     assert (await deals.blank_draft(ctx, maker)).id == second.id != filled.id
+
+
+def test_too_many_revisions_reads_as_one_plain_problem(ctx: AppContext) -> None:
+    from vaada.terms import REVISIONS_PROBLEM, terms_from_draft
+
+    draft = draft_for(ctx, [Part(2_500_000, 10)]).model_dump()
+    draft["blanks"]["revisions"]["value"] = 25
+    with pytest.raises(TermsProblems) as raised:
+        terms_from_draft(Draft.model_validate(draft))
+    revisions = [p for p in raised.value.problems if p.blank == "revisions"]
+    assert [p.message for p in revisions] == [REVISIONS_PROBLEM]
+
+
+def test_a_draft_takes_only_known_blanks() -> None:
+    from pydantic import ValidationError
+
+    Draft.model_validate({"blanks": {"milestones.12.due": {"raw": "x"}}})
+    with pytest.raises(ValidationError, match="unknown blanks"):
+        Draft.model_validate({"blanks": {"anything.at.all": {"raw": "x"}}})
+    with pytest.raises(ValidationError):
+        Draft.model_validate({"blanks": {"work": {"raw": "x" * 2001}}})

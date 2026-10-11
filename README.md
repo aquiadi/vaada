@@ -71,6 +71,7 @@ The API reads these from its environment, or from the file named by `VAADA_ENV_F
 | `SUPABASE_URL` | required | the Supabase project URL; the API fetches its JWKS from `/auth/v1/.well-known/jwks.json` |
 | `SUPABASE_ANON_KEY` | empty | handed to the browser through `/config` |
 | `SUPABASE_JWT_AUDIENCE` | `authenticated` | |
+| `SUPABASE_SERVICE_ROLE_KEY` | empty | the project's secret key; used only to delete a person's sign-in record when they delete their account |
 | `GOOGLE_SIGNIN_ENABLED` | `false` | shows "Continue with Google" (configure the provider in Supabase first) |
 | `PERSONA_SWITCHER_ENABLED` | `false` | dev and demo only |
 | `PERSONA_TOKEN_SECRET` | empty | signs persona tokens; 32+ characters when personas are on |
@@ -107,6 +108,7 @@ The API reads these from its environment, or from the file named by `VAADA_ENV_F
 | `EMAIL_FROM` | `Vaada <deeds@vaada.local>` | |
 | `ADMIN_EMAILS` | empty | comma-separated; these accounts get the admin queue and dispute copies |
 | `CONTACT_ADDRESS`, `CONTACT_PHONE`, `SUPPORT_EMAIL` | empty | shown on the contact page; it says plainly that they're missing until set |
+| `LEGAL_ENTITY`, `GRIEVANCE_OFFICER`, `JURISDICTION_CITY` | empty | the operating company, the grievance officer named on the contact page, and the city whose courts the terms name |
 | `SENTRY_DSN` | empty | error reports, without personal data |
 | `RATE_LIMIT_ENABLED` | `true` | |
 | `LOG_LEVEL` | `INFO` | |

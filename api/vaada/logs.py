@@ -54,6 +54,8 @@ def _before_send(event: Any, _hint: Any) -> Any:
     for exception in (event.get("exception") or {}).get("values") or []:
         if isinstance(exception.get("value"), str):
             exception["value"] = scrub(exception["value"])
+        for frame in (exception.get("stacktrace") or {}).get("frames") or []:
+            frame.pop("vars", None)
     if isinstance(event.get("message"), str):
         event["message"] = scrub(event["message"])
     return event
@@ -66,6 +68,8 @@ def configure_sentry(settings: Settings, component: str) -> None:
         dsn=settings.sentry_dsn,
         environment=settings.vaada_env.value,
         send_default_pii=False,
+        # Frame variables would carry PAN and bank details from a failed payout setup into the error report.
+        include_local_variables=False,
         max_request_body_size="never",
         traces_sample_rate=0.0,
         before_send=_before_send,

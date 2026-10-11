@@ -4,7 +4,7 @@ even mounted unless the boot guards have allowed the dev tools."""
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import select
 
@@ -15,9 +15,11 @@ from vaada.deps import Ctx
 from vaada.models import OutboundEmail, User
 from vaada.money.fake_gateway import FakeGateway
 from vaada.money.gateway import GatewayRejectedError
+from vaada.ratelimit import rate_limit
 from vaada.seed import PERSONAS
 
-router = APIRouter(prefix="/dev")
+# The demo is public, so even its pretend tools are rate limited.
+router = APIRouter(prefix="/dev", dependencies=[Depends(rate_limit("dev", times=60, seconds=60))])
 
 
 class AdvanceBody(BaseModel):

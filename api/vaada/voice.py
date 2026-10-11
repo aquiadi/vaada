@@ -3,7 +3,7 @@ applies them here, and money actions go through the same paths as the buttons.""
 
 import uuid
 from datetime import date
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, Field, TypeAdapter
 
@@ -21,25 +21,25 @@ from vaada.money.errors import MoneyError, NotFoundError
 class MarkDelivered(BaseModel):
     type: Literal["mark_delivered"]
     milestone_idx: int | None = None
-    note: str = ""
+    note: Annotated[str, Field(max_length=1000)] = ""
 
 
 class LogRevision(BaseModel):
     type: Literal["log_revision"]
     milestone_idx: int | None = None
-    note: str = ""
+    note: Annotated[str, Field(max_length=1000)] = ""
 
 
 class Delay(BaseModel):
     type: Literal["delay"]
     milestone_idx: int | None = None
     new_date: date | None = None
-    note: str = ""
+    note: Annotated[str, Field(max_length=500)] = ""
 
 
 class Note(BaseModel):
     type: Literal["note"]
-    text: str
+    text: Annotated[str, Field(min_length=1, max_length=1000)]
 
 
 Action = Annotated[MarkDelivered | LogRevision | Delay | Note, Field(discriminator="type")]
@@ -51,10 +51,7 @@ def ordinal(n: int) -> str:
     return f"{n}{suffix}"
 
 
-async def record(
-    ctx: AppContext, deal_id: uuid.UUID, user: User, raw_text: str, proposed: list[dict[str, Any]]
-) -> VoiceUpdate:
-    actions = actions_adapter.validate_python(proposed)
+async def record(ctx: AppContext, deal_id: uuid.UUID, user: User, raw_text: str, actions: list[Action]) -> VoiceUpdate:
     raw_text = raw_text.strip()
     if not raw_text:
         raise MoneyError("Say or type what happened first.", status_code=422)

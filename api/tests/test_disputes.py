@@ -7,7 +7,7 @@ from tests.factory import delivered, fake, ledger_total, milestone, reload
 from vaada.context import AppContext
 from vaada.models import Dispute, ReconciliationFlag, User
 from vaada.models.enums import DealStatus, DisputeResolution, FlagKind, LedgerKind, MilestoneStatus
-from vaada.money import delivery, disputes
+from vaada.money import delivery, disputes, refunds
 from vaada.money.errors import MoneyError
 from vaada.money.gateway import GatewayUnavailableError
 
@@ -114,6 +114,32 @@ async def test_resolve_by_split_shows_both_sides_and_sums_to_the_paisa(ctx: AppC
     released = await ledger_total(ctx, deal.id, LedgerKind.RELEASED)
     assert reversed_ + released == m.transfer_paise
     assert await ledger_total(ctx, deal.id, LedgerKind.REFUNDED) == 500_001
+
+
+async def test_a_release_that_fails_after_a_split_refund_stays_flagged_until_retried(ctx: AppContext) -> None:
+    scene = await delivered(ctx)
+    m = milestone(scene.deal, 1)
+    dispute = await disputes.open_dispute(ctx, m.id, scene.client, "Half of it is missing")
+    fake(ctx).fail_next("set_transfer_hold", GatewayUnavailableError("down"))
+    await disputes.resolve(ctx, dispute.id, await _admin(ctx), DisputeResolution.SPLIT, 500_001, "Half delivered.")
+    assert await ledger_total(ctx, scene.deal.id, LedgerKind.REFUNDED) == 500_001
+    assert await ledger_total(ctx, scene.deal.id, LedgerKind.RELEASED) == 0
+
+    async def open_release_flags() -> int:
+        async with ctx.sessions() as session:
+            found = await session.execute(
+                select(ReconciliationFlag).where(
+                    ReconciliationFlag.kind == FlagKind.RELEASE_STUCK, ReconciliationFlag.resolved_at.is_(None)
+                )
+            )
+            return len(found.scalars().all())
+
+    assert await open_release_flags() == 1
+    assert await refunds.retry_release(ctx, m.id) == "₹7,499.99 released for the next settlement."
+    assert await ledger_total(ctx, scene.deal.id, LedgerKind.RELEASED) == m.transfer_paise - 500_001
+    assert await open_release_flags() == 0
+    assert not (await fake(ctx).fetch_transfer(m.razorpay_transfer_id or "")).on_hold
+    assert await refunds.retry_release(ctx, m.id) == "Nothing is waiting to be released on this milestone."
 
 
 async def test_a_decided_dispute_cannot_be_decided_again(ctx: AppContext) -> None:

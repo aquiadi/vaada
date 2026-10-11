@@ -261,3 +261,28 @@ async def test_voice_update_note_and_revision(ctx: AppContext) -> None:
         results = applied.json()["results"]
     assert results[1].endswith("The deed covers 1.")
     assert results[2] == "Noted in the register."
+
+
+async def test_a_stale_token_still_opens_a_public_deed_but_not_a_private_route(ctx: AppContext) -> None:
+    from tests.factory import published
+
+    scene = await published(ctx)
+    stale = {"Authorization": "Bearer not.a.token"}
+    async with api(ctx) as client:
+        assert (await client.get(f"/public/deeds/{scene.deal.slug}", headers=stale)).status_code == 200
+        refused = await client.get("/me/export", headers=stale)
+    assert refused.status_code == 401 and "expired" in refused.json()["message"]
+
+
+async def test_each_party_sees_only_their_own_voice_updates(ctx: AppContext) -> None:
+    from tests.factory import funded
+
+    scene = await funded(ctx)
+    async with api(ctx) as client:
+        maker, client_headers = auth(ctx, scene.maker), auth(ctx, scene.client)
+        said = {"raw_text": "Rahul bahut slow hai", "proposed_actions": [{"type": "note", "text": "private"}]}
+        assert (await client.post(f"/deals/{scene.deal.id}/voice-updates", json=said, headers=maker)).status_code == 201
+        seen_by_client = (await client.get(f"/deals/{scene.deal.id}", headers=client_headers)).json()["voice_updates"]
+        seen_by_maker = (await client.get(f"/deals/{scene.deal.id}", headers=maker)).json()["voice_updates"]
+    assert seen_by_client == []
+    assert [v["raw_text"] for v in seen_by_maker] == ["Rahul bahut slow hai"]

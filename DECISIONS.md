@@ -32,3 +32,11 @@ One line each. Newest at the bottom.
 - A voice update is stored only when the person applies something from it; text they discard is never sent, since nothing was acted on and it may be private.
 - Applying a voice update locks it, checks every chosen action before doing any, and records each action as it succeeds, so a retry after a failure skips what was done and a double click applies once.
 - With `CLIENT_FEE_BPS=0` (Razorpay's customer-fee model) the deed, money tables, emails and action sentences drop the processing-fee line and say Razorpay may add its own charge, so that switch stays configuration only.
+- When a refund also releases the rest of a milestone (a split decision, a kill fee), the release is recorded only once Razorpay confirms the hold is off; otherwise a separate `release_stuck` flag stays open and the admin retries it, because recording the refund closes `refund_stuck` flags.
+- Error reports never carry stack-frame variables: a failed payout setup would otherwise send PAN and bank details to Sentry.
+- A data export holds the person's own data and the deeds as both parties see them; the other party's acceptance evidence, a Maker's draft and the Maker's books are left out.
+- Deleting an account also deletes the Supabase sign-in record (with `SUPABASE_SERVICE_ROLE_KEY`) before anything else, so a failure leaves nothing half-deleted, and scrubs the letters Vaada sent the person.
+- The deal room shows each party only their own voice updates; the register already shows both what was applied.
+- Public pages treat a token that fails verification as no token, so an expired session never blocks a deed link.
+- Effect sentences and emails state what reaches the Maker (`transfer_paise`), not the part's gross amount.
+- A path id that can't be valid (a truncated link) answers 404, not a validation message.

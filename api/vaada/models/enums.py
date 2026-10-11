@@ -118,6 +118,7 @@ class FlagKind(StrEnum):
     HOLD_NOT_CONFIRMED = "hold_not_confirmed"
     PAYMENT_ON_CLOSED_DEAL = "payment_on_closed_deal"
     FEE_EXCEEDED = "fee_exceeded"
+    RELEASE_STUCK = "release_stuck"
 
 
 class EmailStatus(StrEnum):

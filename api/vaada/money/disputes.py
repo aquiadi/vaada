@@ -278,6 +278,10 @@ async def resolve(
                 raise GatewayTroubleError() from exc
             except GatewayError as exc:
                 raise MoneyError(f"Razorpay wouldn't release the money: {exc}", status_code=502) from exc
+            if transfer.on_hold:
+                raise MoneyError(
+                    "Razorpay didn't confirm the release, so nothing has changed. Try again.", status_code=502
+                )
             async with transaction(ctx.sessions) as session:
                 stored = await load_milestone(session, milestone.id, lock=True)
                 now = ctx.clock.now()
