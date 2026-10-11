@@ -56,11 +56,11 @@ function lede(deed: PublicDeed, stage: Stage, closed: string | null): string {
     case "paid":
       return deed.status === "completed"
         ? "Paid and completed. Every part of this deed has been settled."
-        : `Paid. Razorpay releases the money to ${maker} one part at a time, as each part is delivered and approved.`;
+        : `Paid. Razorpay releases the money to ${maker} one part at a time, as you approve each part or its review period ends.`;
     case "maker":
       return `This is your deed, as ${deed.client.name} sees it.`;
     case "accept":
-      return `${deed.maker.name} has written down what you agreed. Read it through; if it’s right, accept it and pay at the foot of the page. Razorpay holds the money until the work is delivered.`;
+      return `${deed.maker.name} has written down what you agreed. Read it through; if it’s right, accept it and pay at the foot of the page. Razorpay holds the money until you approve the work, or its review period ends.`;
     case "pay":
       return "You’ve accepted this deed. Pay at the foot of the page so the work can begin.";
     case "taken":

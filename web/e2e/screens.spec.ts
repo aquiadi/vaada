@@ -55,6 +55,8 @@ const ROUTES: Route[] = [
 
 async function settle(page: Page): Promise<void> {
   await page.waitForLoadState("networkidle");
+  // The persona slip exists only in dev; fixed to the first viewport, it would land mid-page in a full-page shot.
+  await page.addStyleTag({ content: 'aside[aria-label="Dev personas"] { display: none !important; }' });
   await page.evaluate(() => document.fonts.ready);
   await page.waitForTimeout(400);
 }

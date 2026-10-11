@@ -27,9 +27,10 @@ export function summaryText(f: SummaryFacts): string {
   const payer = firstName(f.client) || "the Client";
   const payee = firstName(f.maker) || "the Maker";
   const opening = payer.charAt(0).toUpperCase() + payer.slice(1);
+  const share = f.parts === 1 ? "it goes" : "each part goes";
   return (
     `${maker} will deliver ${work} to ${client}, ${parts}${by}${price}. ` +
-    `${opening} pays it all at the start; Razorpay holds it, and each part goes to ${payee} when ${payer} approves it, ` +
+    `${opening} pays it all at the start; Razorpay holds it, and ${share} to ${payee} when ${payer} approves it, ` +
     `or ${hoursInWords(f.bufferHours)} after its ${numberWord(f.reviewDays)}-day review ends if ${payer} says nothing.`
   );
 }

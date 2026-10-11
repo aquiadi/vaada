@@ -30,6 +30,21 @@ describe("summaryText", () => {
         "the Client says nothing.",
     );
   });
+
+  it("speaks of the money as one sum when there is one part", () => {
+    const text = summaryText({
+      maker: "Aditi Rao",
+      client: "Rahul Mehta",
+      organisation: null,
+      work: "a pitch deck",
+      totalPaise: 12_500_00,
+      parts: 1,
+      lastDue: "2026-10-24",
+      reviewDays: 5,
+      bufferHours: 24,
+    });
+    expect(text).toContain("Razorpay holds it, and it goes to Aditi when Rahul approves it,");
+  });
 });
 
 describe("hoursInWords", () => {
