@@ -119,7 +119,7 @@ Tests read `TEST_DATABASE_ADMIN_URL` (default: the local Supabase Postgres) and 
 
 ## Deploying demo and staging
 
-Both are three pieces: a Supabase project, two Railway services (API and worker) with a Railway Redis, and the web app on Vercel. Use a separate Supabase project for each environment.
+Everything runs on Railway except sign-in and the database, which are a Supabase project: one Railway project holds a Redis and three services from this repo (API, worker, web). Use a separate Supabase project and Railway project for each environment.
 
 **Supabase**
 
@@ -141,13 +141,13 @@ with `AMOY_RPC_URL` set. The address lands in `contracts/deployments/80002.json`
 
 **Railway**
 
-1. Add a Redis database to the project.
-2. Add a service from this repo with root directory `api`. Point its config-as-code path at `api/railway.demo.toml` for demo (it migrates and seeds before each deploy) or `api/railway.toml` for staging (it migrates). Give it the variables from `deploy/demo.env.example` or `deploy/staging.env.example`, and a public domain.
-3. Add a second service from the same repo and root, with config path `api/railway.worker.toml` and the same variables. It runs the queue: webhook processing, hold checks, reconciliation, email and registry writes.
+1. Create a project and add a Redis database to it.
+2. API: add a service from this repo with root directory `api` and config-as-code path `/api/railway.demo.toml` for demo (it migrates and seeds before each deploy) or `/api/railway.toml` for staging and production (it migrates). Give it the variables from `deploy/demo.env.example`, `deploy/staging.env.example` or `deploy/production.env.example`, with `REDIS_URL=${{Redis.REDIS_URL}}`, and generate a public domain.
+3. Worker: add a second service from the same repo, root directory `api`, config path `/api/railway.worker.toml`, and the same variables (Railway's "shared variables" saves typing them twice). It runs the queue: webhook processing, hold checks, reconciliation, email and registry writes. It needs no domain.
+4. Web: add a third service, root directory `web`, config path `/web/railway.toml`, with one variable, `VITE_API_URL`, set to the API's public URL (optionally `VITE_SENTRY_DSN`). It builds the Vite app and serves it with Caddy, with single-page routing and the security headers. Generate a public domain.
+5. Set the API's `WEB_ORIGIN` to the web service's address and `API_PUBLIC_URL` to its own, then redeploy the API and worker. In Supabase, set the site URL to the web address too.
 
-**Vercel**
-
-Import the repo with root directory `web`. Set `VITE_API_URL` to the API's public URL. `web/vercel.json` handles the single-page routing and headers. Then set the API's `WEB_ORIGIN` to the Vercel address.
+`web/vercel.json` is still there if you would rather host the web app on Vercel; set `VITE_API_URL` the same way.
 
 **Razorpay** (staging only)
 

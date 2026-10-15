@@ -54,11 +54,12 @@ function DeedLine({ deal }: { deal: DealSummary }) {
         {deedNumber(deal.deed_no)}
       </p>
       <div className="min-w-0 py-3 pl-3 sm:pl-5">
-        <p className="m-0 flex items-baseline-last gap-2 text-body">
-          <Link to={to} className="min-w-0 text-ink">
+        {/* On a phone the title takes the whole line and the sum follows it; the dotted leader returns from sm up. */}
+        <p className="m-0 flex flex-wrap items-baseline-last gap-x-2 text-body sm:flex-nowrap">
+          <Link to={to} className="min-w-0 basis-full text-ink sm:basis-auto">
             {deal.title}
           </Link>
-          <span aria-hidden="true" className="min-w-6 flex-1 border-b border-dotted border-[color-mix(in_srgb,var(--ink)_40%,transparent)]" />
+          <span aria-hidden="true" className="hidden min-w-6 flex-1 border-b border-dotted sm:block border-[color-mix(in_srgb,var(--ink)_40%,transparent)]" />
           {total !== null ? (
             <Rupees paise={total} className="shrink-0 text-ink" />
           ) : (

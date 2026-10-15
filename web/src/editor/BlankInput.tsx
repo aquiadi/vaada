@@ -138,12 +138,12 @@ export function BlankInput({ blankKey }: { blankKey: string }) {
             dispatch({ type: "focus", key: blankKey });
           }}
           className={[
-            "cursor-text rounded-xs px-0.5 outline-offset-2 [box-decoration-break:clone]",
+            "cursor-text rounded-xs outline-offset-2 [box-decoration-break:clone]",
             empty
               ? "italic text-ink-soft underline decoration-dotted decoration-[color-mix(in_srgb,var(--ink)_45%,transparent)] underline-offset-[0.28em] text-[0.92em]"
               : failed
                 ? "text-ink underline decoration-wavy decoration-bahi underline-offset-[0.22em]"
-                : "text-ink underline decoration-dotted decoration-[color-mix(in_srgb,var(--gold)_70%,transparent)] underline-offset-[0.3em]",
+                : "text-ink underline decoration-dotted decoration-[color-mix(in_srgb,var(--gold)_35%,transparent)] underline-offset-[0.3em] hover:decoration-[color-mix(in_srgb,var(--gold)_80%,transparent)]",
             problem && empty ? "decoration-bahi" : "",
           ].join(" ")}
         >

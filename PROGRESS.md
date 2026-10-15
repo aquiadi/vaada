@@ -34,11 +34,15 @@
   the client's deed, the payouts status badge, margin errors in ink, failed blanks' doubled full stops, the footer
   seam and theme radios, the persona slip on phones, and the wording of the receipt, refund note, register, dispute
   effect, outbox and ledger CSV.
-- Still open from that review, all polish: the home page's deed plate (cut mid-sentence; should show the whole deed
-  small), merging "To fill in" notes so the editor margin leaves no holes, quieter underlines on filled blanks, the
-  seal's ring legend, a phrase normaliser for mid-sentence slots, ledger/deeds/maker layouts at 390, the admin
-  "as of" time, outbox dates on the dev clock, the maker certificate's "since" date in the seed, a print running
-  head, and role-specific "released" wording. The six legal pages were looked at in pass 2 only, not reviewed in depth.
+- Since then also fixed: the home page shows the whole sample deed small (foot, Stamp Act line and seal visible), the
+  editor margin merges plain "To fill in" notes so paragraphs don't leave holes, filled blanks have a quieter
+  underline, the seal's legend closes the ring and an unstamped seal no longer says "Funded", every printed page
+  carries a small running head (Vaada, the address, the print date), the admin desk says "as of" when, the maker
+  certificate's "since" is never later than its first deed, and the deeds index and maker rows read cleanly at 390.
+- Still open, polish only: a phrase normaliser for mid-sentence blanks (the seed's values are written that way
+  already), role-specific "released" wording for the client, outbox dates on the dev clock, and a dedicated review of
+  the six legal pages.
+- Deploy: everything except Supabase runs on Railway (API, worker, web, Redis); README "Deploying" has the steps.
 - In a container that can't pull Docker images, `scripts/native-dev/setup.sh` builds the same stack natively once,
   and `scripts/native-dev/up.sh` starts it again after a restart (web on 5173).
 

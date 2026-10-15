@@ -91,7 +91,7 @@ export default function Home() {
         </p>
       </section>
 
-      <div className="mx-auto max-w-3xl">
+      <div className="mx-auto max-w-[30rem]">
         <DeedPlate />
       </div>
 

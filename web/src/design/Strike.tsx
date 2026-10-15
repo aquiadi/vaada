@@ -31,18 +31,27 @@ function strokePath(random: () => number): string {
 }
 
 /** One rect per line: an inline element can report several fragments on the same line. */
-function lineSegments(rects: DOMRect[], base: DOMRect): Segment[] {
+/**
+ * One rect per line: an inline element can report several fragments on the same line. Client rects are in screen
+ * pixels, so a deed shown scaled down (the home page's plate) is measured back in its own layout pixels.
+ */
+function lineSegments(rects: DOMRect[], base: DOMRect, scale: number): Segment[] {
   const lines: Segment[] = [];
-  for (const rect of rects) {
+  for (const screenRect of rects) {
+    const rect = {
+      left: (screenRect.left - base.left) / scale,
+      top: (screenRect.top - base.top) / scale,
+      width: screenRect.width / scale,
+      height: screenRect.height / scale,
+    };
     if (rect.width < 1) continue;
-    const top = rect.top - base.top;
-    const line = lines.find((l) => Math.abs(l.top - top) < 2);
+    const line = lines.find((l) => Math.abs(l.top - rect.top) < 2);
     if (line) {
-      const right = Math.max(line.left + line.width, rect.right - base.left);
-      line.left = Math.min(line.left, rect.left - base.left);
+      const right = Math.max(line.left + line.width, rect.left + rect.width);
+      line.left = Math.min(line.left, rect.left);
       line.width = right - line.left;
     } else {
-      lines.push({ left: rect.left - base.left, top, width: rect.width, height: rect.height });
+      lines.push(rect);
     }
   }
   return lines;
@@ -67,7 +76,10 @@ export function Struck({ seed, animate = false, children }: { seed: string; anim
     const anchor = origin.current;
     if (!element || !anchor) return;
     const measure = () => {
-      const next = lineSegments([...element.getClientRects()], anchor.getBoundingClientRect());
+      const box = element.parentElement;
+      const scale = box && box.offsetWidth > 0 ? box.getBoundingClientRect().width / box.offsetWidth : 1;
+      if (scale < 0.01) return;
+      const next = lineSegments([...element.getClientRects()], anchor.getBoundingClientRect(), scale);
       setSegments((previous) => (sameSegments(previous, next) ? previous : next));
     };
     measure();

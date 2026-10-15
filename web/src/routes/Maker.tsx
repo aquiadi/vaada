@@ -56,13 +56,13 @@ function plural(count: number, one: string, many: string): string {
 function MilestoneLine({ milestone: m }: { milestone: ReleasedMilestone }) {
   return (
     <li className="border-b hairline py-3">
-      <p className="m-0 flex items-baseline-last justify-between gap-4 text-body text-ink">
+      <p className="m-0 flex items-baseline justify-between gap-4 text-body text-ink">
         <span>
           <span className="whitespace-nowrap">
-            Deed No. <span className="figures">{m.deed_no}</span> ·
+            Deed No. <span className="figures">{m.deed_no}</span>
           </span>{" "}
-          <span className="whitespace-nowrap">Milestone {toRoman(m.idx)} ·</span>{" "}
-          <span className="whitespace-nowrap">released {dayOf(m.released_at)}</span>
+          · <span className="whitespace-nowrap">Milestone {toRoman(m.idx)}</span>
+          <span className="block text-note text-ink-soft">Released {dayOf(m.released_at)}</span>
         </span>
         <Rupees paise={m.released_paise} className="shrink-0" />
       </p>

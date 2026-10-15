@@ -334,7 +334,7 @@ function WebhookFailures({ events, onDone }: { events: WebhookFailure[]; onDone:
   );
 }
 
-function Desk({ queue }: { queue: DeskQueue }) {
+function Desk({ queue, asOf }: { queue: DeskQueue; asOf: number }) {
   const client = useQueryClient();
   const [said, setSaid] = useState<Said | null>(null);
   const reportIn = (section: string) => async (message: Omit<Said, "section">) => {
@@ -355,7 +355,7 @@ function Desk({ queue }: { queue: DeskQueue }) {
         lede="What needs a person. Disputes come first, ordered by how soon Razorpay’s refund window closes on each."
       />
       <p className="-mt-4 mb-10 text-note text-ink-soft">
-        Signed in as <Mono>{queue.admin}</Mono>. Deed numbers are shown without links: a deal room opens only for its two parties.
+        Signed in as <Mono>{queue.admin}</Mono>. As of {formatInstantIst(new Date(asOf).toISOString())}. Deed numbers are shown without links: a deal room opens only for its two parties.
       </p>
 
       <DeskSection n={1} id="desk-disputes" title="Disputes, by refund deadline" count={queue.disputes.length} nothing="No dispute is open." notice={<SaidNotice said={said} section="disputes" />}>
@@ -456,5 +456,5 @@ export default function Admin() {
       </div>
     );
   }
-  return <Desk queue={query.data} />;
+  return <Desk queue={query.data} asOf={query.dataUpdatedAt} />;
 }

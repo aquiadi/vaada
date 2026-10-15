@@ -243,6 +243,19 @@ function PageTitle() {
   return <title>{handle ? `${handle.title} · Vaada` : "Vaada · वादा"}</title>;
 }
 
+const printedOn = new Intl.DateTimeFormat("en-IN", { timeZone: "Asia/Kolkata", day: "numeric", month: "short", year: "numeric" });
+
+/** The masthead doesn't print, so a printed page still says whose it is, where it came from and when. */
+function PrintHead() {
+  const { pathname } = useLocation();
+  return (
+    <p className="m-0 hidden border-b hairline pb-2 text-micro text-ink-soft print:block">
+      Vaada · वादा · {window.location.origin}
+      {pathname} · printed {printedOn.format(new Date())}
+    </p>
+  );
+}
+
 /** Browsers say nothing when a single-page app changes page, so the new page's title is read out here. */
 function RouteAnnouncer() {
   const { pathname } = useLocation();
@@ -288,6 +301,7 @@ export function Shell() {
       </a>
       {config?.demo ? <DemoBand /> : null}
       <Masthead />
+      <PrintHead />
       <main id="main" className="grain flex-1 pb-16">
         <Outlet />
       </main>

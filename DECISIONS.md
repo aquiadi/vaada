@@ -49,3 +49,5 @@ One line each. Newest at the bottom.
 - A read deed states its parts by count ("in two parts, as follows:") instead of repeating the plan's own words, and each part reads "title, amount, due by date: deliverables", so free text follows a colon.
 - On the client's page the seal is pressed on the deed itself, as in the deal room, not in a separate card.
 - Screenshots in docs/screens are 256-colour PNGs; at these sizes paper and ink lose nothing visible and the repo stays half the size.
+- The web app is a Railway service too: a Vite build served by Caddy (web/Dockerfile, web/Caddyfile), so one Railway project holds the API, worker, web and Redis; Supabase stays for sign-in and Postgres. web/vercel.json remains as an alternative.
+- The home page shows the whole sample deed scaled down, foot and seal included, rather than a full-size crop of its head; on paper only its caption prints.
