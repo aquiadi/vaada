@@ -26,19 +26,19 @@
 
 ## Next
 
-- The six-lens review's 84 findings are fixed and committed; the e2e passed after them.
-- Screenshot pass 1 is done for 15 of 21 routes. Five reviewers' findings are in
-  docs/review/screens-pass1/pass1-*.md (80 findings), and they are split into seven fix groups by file ownership in
-  docs/review/screens-pass1/tasks/ (common.md holds the rules every fixer follows; shell, deed, editor, room, books,
-  api). Still to do, in order:
-  1. Review the six legal routes (terms, privacy, refunds, delivery, contact, pricing) the same way and write a
-     legal.md task file (owner of web/src/legal/** and web/src/routes/Legal.tsx).
-  2. Run the fix groups in parallel on their disjoint files, then: tsc, eslint, vitest, the API checks, reset the
-     dev database (`drop schema vaada cascade; drop schema fakegw cascade;`, `make migrate seed`), restart the API
-     and worker, and run the e2e.
-  3. Pass 2: `make screens` (or `SCREENS_DIR=... E2E_BASE_URL=http://127.0.0.1:5173 npx playwright test --config
-     playwright.screens.config.ts` in web), review every shot again, fix, and commit the final shots to docs/screens.
-  4. Delete docs/review/screens-pass1 once its findings are dealt with; mark this done here.
+- Screenshots: two passes done; the final 84 shots (21 routes, 1440 and 390, light and dark) are in docs/screens,
+  saved as 256-colour PNGs to keep the repo small. Pass 1 (15 routes reviewed in depth) found 80 problems, in
+  docs/review/screens-pass1. Fixed: print (buttons hidden, headings kept with their text, the ledger balance printed
+  once, full registry hashes on paper, editing controls off a printed draft), the read deed (centred to its measure,
+  hanging sub-clauses, "in two parts, as follows:", typographic apostrophes, evidence spaced), the seal pressed on
+  the client's deed, the payouts status badge, margin errors in ink, failed blanks' doubled full stops, the footer
+  seam and theme radios, the persona slip on phones, and the wording of the receipt, refund note, register, dispute
+  effect, outbox and ledger CSV.
+- Still open from that review, all polish: the home page's deed plate (cut mid-sentence; should show the whole deed
+  small), merging "To fill in" notes so the editor margin leaves no holes, quieter underlines on filled blanks, the
+  seal's ring legend, a phrase normaliser for mid-sentence slots, ledger/deeds/maker layouts at 390, the admin
+  "as of" time, outbox dates on the dev clock, the maker certificate's "since" date in the seed, a print running
+  head, and role-specific "released" wording. The six legal pages were looked at in pass 2 only, not reviewed in depth.
 - In a container that can't pull Docker images, `scripts/native-dev/setup.sh` builds the same stack natively once,
   and `scripts/native-dev/up.sh` starts it again after a restart (web on 5173).
 

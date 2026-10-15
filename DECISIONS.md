@@ -45,3 +45,7 @@ One line each. Newest at the bottom.
 - Alt+Down (Option+Down on a Mac) in a focused blank opens its "heard" correction, so correcting what was heard has a keyboard path while the margin words stay out of the Tab order.
 - Deed wording version 1 was corrected in place before launch (a missing "do so" in §5), since no one outside dev has accepted it; from launch on, any change to the deed's words bumps AGREEMENT_VERSION and keeps the old text.
 - Full-page screenshots hide the dev persona slip: it is fixed to the first viewport, so Playwright would draw it over the middle of the page.
+- Below the sm breakpoint the dev persona slip is hidden: on a phone it covered the deed. Personas are switched on wider screens.
+- A read deed states its parts by count ("in two parts, as follows:") instead of repeating the plan's own words, and each part reads "title, amount, due by date: deliverables", so free text follows a colon.
+- On the client's page the seal is pressed on the deed itself, as in the deal room, not in a separate card.
+- Screenshots in docs/screens are 256-colour PNGs; at these sizes paper and ink lose nothing visible and the repo stays half the size.

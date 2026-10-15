@@ -283,7 +283,7 @@ async def seed(ctx: AppContext) -> bool:
             "kill_fee.percent": b("Pachees percent.", 25),
             "ip_transfer.exclusions": b(
                 "Drafts aur jo concepts use nahi hue, aur portfolio ka haq.",
-                "Drafts aur jo concepts use nahi hue, aur portfolio ka haq",
+                "drafts aur jo concepts use nahi hue, aur portfolio ka haq",
             ),
         },
         "struck": [],
