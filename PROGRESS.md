@@ -26,14 +26,22 @@
 
 ## Next
 
-- A six-lens review (hard rules, design, accessibility, web/API contract, code style, logic) found 84 confirmed problems.
-  The API, config and shared-helper ones are fixed and committed (stuck releases after refunds, Sentry frame variables,
-  data export and account deletion, voice-update privacy, stale tokens on public pages, amounts after fees, plain errors,
-  input limits, rate limits, dead code). The web ones are being fixed now by five agents on disjoint files; when they
-  report: typecheck, lint, tests, the e2e, then commit.
-- Then the screenshot passes: reset the dev database (it collects test deals), `make screens`, look at every shot, fix,
-  repeat; final shots in docs/screens.
+- The six-lens review's 84 findings are fixed and committed; the e2e passed after them.
+- Screenshot pass 1 is done for 15 of 21 routes. Five reviewers' findings are in
+  docs/review/screens-pass1/pass1-*.md (80 findings), and they are split into seven fix groups by file ownership in
+  docs/review/screens-pass1/tasks/ (common.md holds the rules every fixer follows; shell, deed, editor, room, books,
+  api). Still to do, in order:
+  1. Review the six legal routes (terms, privacy, refunds, delivery, contact, pricing) the same way and write a
+     legal.md task file (owner of web/src/legal/** and web/src/routes/Legal.tsx).
+  2. Run the fix groups in parallel on their disjoint files, then: tsc, eslint, vitest, the API checks, reset the
+     dev database (`drop schema vaada cascade; drop schema fakegw cascade;`, `make migrate seed`), restart the API
+     and worker, and run the e2e.
+  3. Pass 2: `make screens` (or `SCREENS_DIR=... E2E_BASE_URL=http://127.0.0.1:5173 npx playwright test --config
+     playwright.screens.config.ts` in web), review every shot again, fix, and commit the final shots to docs/screens.
+  4. Delete docs/review/screens-pass1 once its findings are dealt with; mark this done here.
+- In a container that can't pull Docker images, `scripts/native-dev/setup.sh` builds the same stack natively once,
+  and `scripts/native-dev/up.sh` starts it again after a restart (web on 5173).
 
 ## Broken
 
-- Nothing known beyond the review findings above. The e2e test (`make e2e`) passed before the web fixes began.
+- Nothing known beyond the screenshot findings above. The e2e (`make e2e`) passed after the review fixes.
