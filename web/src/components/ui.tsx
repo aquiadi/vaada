@@ -33,7 +33,7 @@ export const Button = forwardRef<HTMLButtonElement, ButtonHTMLAttributes<HTMLBut
           }
           onClick?.(event);
         }}
-        className={`smallcaps inline-flex min-h-10 items-center justify-center gap-2 rounded-sm px-4 py-2 text-ui transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-55 aria-busy:cursor-progress aria-busy:opacity-55 ${TONES[tone]} ${className}`}
+        className={`smallcaps inline-flex min-h-10 items-center justify-center gap-2 rounded-sm print:hidden px-4 py-2 text-ui transition-colors duration-150 ease-out disabled:cursor-not-allowed disabled:opacity-55 aria-busy:cursor-progress aria-busy:opacity-55 ${TONES[tone]} ${className}`}
       >
         {busy ? <span aria-hidden="true">…</span> : null}
         {children}
@@ -46,7 +46,7 @@ export function ButtonLink({ tone = "primary", className = "", ...rest }: LinkPr
   return (
     <Link
       {...rest}
-      className={`smallcaps inline-flex min-h-10 items-center justify-center rounded-sm px-4 py-2 text-ui no-underline transition-colors duration-150 ease-out ${TONES[tone]} ${className}`}
+      className={`smallcaps inline-flex min-h-10 items-center justify-center rounded-sm px-4 print:hidden py-2 text-ui no-underline transition-colors duration-150 ease-out ${TONES[tone]} ${className}`}
     />
   );
 }

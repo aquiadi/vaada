@@ -48,7 +48,7 @@ export function DeskTable({ caption, columns, children }: { caption: string; col
         {caption}
       </p>
       <div role="region" aria-labelledby={captionId} tabIndex={0} className="overflow-x-auto">
-        <table className="w-full min-w-[52rem] border-collapse text-note text-ink">
+        <table className={`w-full border-collapse text-note text-ink ${columns.length > 5 ? "min-w-[52rem]" : ""}`}>
           <thead>
             <tr className="border-b border-ink">
               {columns.map((column) => (

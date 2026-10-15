@@ -16,7 +16,7 @@ import { PayStep } from "../room/PayStep";
 import { dayOf, firstName, heldPaise } from "../room/words";
 
 const PAGE = "mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-10";
-const SLIP = "sheet grain mx-auto mt-10 max-w-2xl scroll-mt-6 rounded-sm p-5 sm:p-8";
+const SLIP = "sheet grain mx-auto mt-10 max-w-[52rem] scroll-mt-6 rounded-sm p-5 sm:p-8";
 
 type Stage = "closed" | "paid" | "maker" | "accept" | "pay" | "taken";
 
@@ -73,10 +73,10 @@ function holding(deed: PublicDeed, held: number): ReactNode {
   const maker = firstName(deed.maker.name);
   if (deed.status === "completed") return "Every part of this deed has been settled. The deal room keeps the full register.";
   if (held === 0) return "Razorpay holds nothing more for this deed. The deal room shows where each part of the money went.";
-  const rest = held < deed.fees.total_paise ? " The deal room shows where the rest went." : "";
   return (
     <>
-      Razorpay holds <Rupees paise={held} /> and releases it to {maker} one part at a time, as each is delivered and approved.{rest}
+      Razorpay holds <Rupees paise={held} /> for the parts still to come, and releases each to {maker} when you approve it or its
+      review period ends.
     </>
   );
 }
@@ -86,8 +86,7 @@ function Receipt({ deed, stamped }: { deed: PublicDeed; stamped: boolean }) {
   const held = heldPaise(deed.milestones);
   return (
     <section aria-labelledby="receipt-heading" className={SLIP}>
-      <div className="flex flex-col items-center gap-6 text-center sm:flex-row sm:items-center sm:text-left">
-        <Seal hash={deed.agreement_hash} caption="Funded" size={148} animate={stamped} />
+      <div>
         <div className="min-w-0">
           <h2 id="receipt-heading" ref={stamped ? focusOnMount : undefined} tabIndex={-1} className="font-display text-h3 text-ink focus:outline-none">
             {completed ? "Paid and completed" : held > 0 ? "Paid, and held by Razorpay" : "Paid"}
@@ -223,6 +222,7 @@ export default function ClientDeed() {
           struck={deed.struck_clauses}
           accepted={deed.accepted}
           registry={deed.registry}
+          seal={stage === "paid" ? <Seal hash={deed.agreement_hash} caption="Funded" size={156} animate={stampedHere} /> : undefined}
         />
       ) : (
         <Notice tone="error">The text of this deed couldn’t be loaded. Reload the page; if it stays missing, write to us.</Notice>

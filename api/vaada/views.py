@@ -111,7 +111,7 @@ def milestone_actions(
                 "action": "dispute",
                 "label": "Raise a problem",
                 "effect": f"This keeps {amount} held until Vaada decides. Both of you see your reason. "
-                f"Disputes close {ist_moment(m.review_ends_at)}.",
+                f"You can raise a problem until {ist_moment(m.review_ends_at)}.",
             }
         )
     refund_opens = m.due_at + timedelta(days=s.grace_days)

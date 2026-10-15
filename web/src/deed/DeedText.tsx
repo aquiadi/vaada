@@ -34,8 +34,25 @@ export interface DeedFacts {
  * measure first and the margin takes what is left, so notes on a wide sheet stay short and leave no holes in the deed.
  * Without a margin (a deed that is read, not edited) there is no margin column, so a printed deed keeps the page's width.
  */
-export function Para({ children, margin, dropCap = false, id }: { children: ReactNode; margin?: ReactNode; dropCap?: boolean; id?: string }) {
-  const text = <p className={`m-0 mb-4 max-w-[68ch] text-deed text-ink [hyphens:manual] ${dropCap ? "drop-cap" : ""}`}>{children}</p>;
+export function Para({
+  children,
+  margin,
+  dropCap = false,
+  hang = false,
+  id,
+}: {
+  children: ReactNode;
+  margin?: ReactNode;
+  dropCap?: boolean;
+  /** A numbered sub-clause: its numeral hangs in the indent and wrapped lines align under the text. */
+  hang?: boolean;
+  id?: string;
+}) {
+  const text = (
+    <p className={`m-0 mb-4 max-w-[68ch] text-deed text-ink [hyphens:manual] ${dropCap ? "drop-cap" : ""} ${hang ? "pl-[2.5em] -indent-[2.5em]" : ""}`}>
+      {children}
+    </p>
+  );
   if (margin === undefined) return <div id={id}>{text}</div>;
   return (
     <div id={id} className="grid grid-cols-1 gap-x-8 md:grid-cols-[minmax(0,68ch)_minmax(13rem,1fr)]">
@@ -46,15 +63,15 @@ export function Para({ children, margin, dropCap = false, id }: { children: Reac
 }
 
 function feeSentence(facts: DeedFacts): string {
-  if (facts.clientFeePaise === null) return "together with a processing fee that covers the payment gateway's charges";
-  // With Razorpay's customer-fee model Vaada charges nothing on top, and Razorpay shows its own charge at checkout.
+  if (facts.clientFeePaise === null) return "together with a processing fee that covers the payment gateway’s charges";
+  // With Razorpay’s customer-fee model Vaada charges nothing on top, and Razorpay shows its own charge at checkout.
   if (facts.clientFeePaise === 0) return "together with any charge Razorpay adds at checkout";
-  return `together with a processing fee of ${formatRupees(facts.clientFeePaise)} that covers the payment gateway's charges`;
+  return `together with a processing fee of ${formatRupees(facts.clientFeePaise)} that covers the payment gateway’s charges`;
 }
 
 /** A late part comes back whole: the processing fee was paid on top of the total, and it is the only thing kept. */
 function refundSentence(facts: DeedFacts): string {
-  // With Razorpay's customer-fee model there is no processing fee of Vaada's to keep.
+  // With Razorpay’s customer-fee model there is no processing fee of Vaada’s to keep.
   if (facts.clientFeePaise === 0) return "Razorpay returns it in full";
   return "Razorpay returns it in full; the processing fee is not refunded";
 }
@@ -94,19 +111,26 @@ export function DeedBody({ s, facts }: { s: DeedSlots; facts: DeedFacts }) {
       <SectionMark n={3} title="The money" />
       <Para margin={margin(["total", "plan"])}>
         The Client shall pay a total of {s.blank("total")}
-        {facts.totalPaise ? <span className="text-ink-soft"> ({rupeesInWords(facts.totalPaise)})</span> : null}, in these parts:{" "}
-        {s.blank("plan")}.
+        {facts.totalPaise ? <span className="text-ink-soft"> ({rupeesInWords(facts.totalPaise)})</span> : null}
+        {s.margin ? (
+          <>
+            , in these parts: {s.blank("plan")}.
+          </>
+        ) : (
+          // Read, the plan's own words would repeat the parts below; the count says it plainly.
+          <>, in {s.milestoneCount === 1 ? "one part" : `${numberWord(s.milestoneCount)} parts`}, as follows:</>
+        )}
       </Para>
       <ol className="m-0 mb-4 list-none p-0" aria-label="The parts of the work and their payments">
         {parts.map((i) => (
           <li key={i}>
-            <Para margin={margin([`milestones.${i}.title`, `milestones.${i}.amount`, `milestones.${i}.deliverables`, `milestones.${i}.due`])}>
-              <span className="mr-1 inline-block min-w-[2.5em] text-ink-soft" aria-hidden="true">
+            <Para hang margin={margin([`milestones.${i}.title`, `milestones.${i}.amount`, `milestones.${i}.deliverables`, `milestones.${i}.due`])}>
+              <span className="inline-block w-[2.5em] indent-0 text-ink-soft" aria-hidden="true">
                 ({toRoman(i).toLowerCase()})
               </span>
               <span className="sr-only">Part {i}. </span>
-              {s.blank(`milestones.${i}.title`)}: {s.blank(`milestones.${i}.amount`)}, for {s.blank(`milestones.${i}.deliverables`)},
-              due by {s.blank(`milestones.${i}.due`)}.{s.milestoneControls?.(i)}
+              {s.blank(`milestones.${i}.title`)}, {s.blank(`milestones.${i}.amount`)}, due by {s.blank(`milestones.${i}.due`)}:{" "}
+              {s.blank(`milestones.${i}.deliverables`)}.{s.milestoneControls?.(i)}
             </Para>
           </li>
         ))}
@@ -132,13 +156,13 @@ export function DeedBody({ s, facts }: { s: DeedSlots; facts: DeedFacts }) {
       <Para margin={margin([])}>
         The Maker shall deliver each part by the date written against it. When the Maker marks a part delivered, the Client has{" "}
         {reviewWords} days to approve it or to raise a problem. If the Client does neither, the money for that part is released to
-        the Maker {bufferText} after those {reviewWords} days end. Released money reaches the Maker's bank on Razorpay's next
+        the Maker {bufferText} after those {reviewWords} days end. Released money reaches the Maker’s bank on Razorpay’s next
         settlement. A date moves only if both parties agree to it on Vaada.
       </Para>
 
       <SectionMark n={5} title="If things go wrong" />
       <Para margin={margin([])}>
-        If a part is not delivered within {graceWords} days after its due date, the Client may ask for that part's money back, and{" "}
+        If a part is not delivered within {graceWords} days after its due date, the Client may ask for that part’s money back, and{" "}
         {refundSentence(facts)}. Either party may raise a dispute about a delivered part during its review period; the money then
         stays held until Vaada decides to release it, return it or divide it, and writes to both parties with its reasons. The
         parties may end the rest of this deed by agreeing to do so on Vaada: money for work not yet delivered goes back to the Client,
@@ -161,9 +185,9 @@ export function DeedBody({ s, facts }: { s: DeedSlots; facts: DeedFacts }) {
 export function DeedDisclaimers() {
   return (
     <ul className="m-0 list-none space-y-1 p-0 text-note text-ink-soft">
-      <li>Vaada helps people write down what they agreed, and isn't a lawyer.</li>
+      <li>Vaada helps people write down what they agreed, and isn’t a lawyer.</li>
       <li>This deed is not stamped under the Indian Stamp Act.</li>
-      <li>Vaada's decisions on disputes settle the money held here, and don't stop either party going to court.</li>
+      <li>Vaada’s decisions on disputes settle the money held here, and don’t stop either party going to court.</li>
     </ul>
   );
 }

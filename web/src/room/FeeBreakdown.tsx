@@ -66,7 +66,7 @@ export function FeeBreakdown({ fees, maker, graceDays }: Props) {
       )}
       {graceDays !== null ? (
         <p className="m-0 mt-3 text-note text-ink-soft">
-          If a part isn’t delivered within {numberWord(graceDays)} days of its date, you can ask for that part back. The processing fee isn’t refunded.
+          If a part isn’t delivered within {numberWord(graceDays)} days after its due date, you can ask for that part’s money back. The processing fee isn’t refunded.
         </p>
       ) : null}
     </div>

@@ -88,7 +88,7 @@ function ThemeToggle() {
               applyTheme(choice);
               setTheme(choice);
             }}
-            className="accent-[var(--ink)]"
+            className="m-0 size-2.5 cursor-pointer appearance-none rounded-full border border-ink-soft bg-transparent checked:border-ink checked:bg-ink"
           />
           {choice === "system" ? "Match device" : choice}
         </label>
@@ -107,7 +107,7 @@ function Colophon() {
     ["/pricing", "Pricing"],
   ];
   return (
-    <footer className="no-print mt-16 border-t hairline bg-paper-deep">
+    <footer className="no-print border-t hairline bg-paper-deep">
       <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-8 sm:px-6">
         <nav aria-label="Policies" className="flex flex-wrap gap-x-5 gap-y-2">
           {legal.map(([to, label]) => (
@@ -117,11 +117,11 @@ function Colophon() {
           ))}
         </nav>
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <p className="m-0 text-note italic text-ink-soft">Set in Cormorant &amp; Source Serif. Dictated with Wispr Flow.</p>
+          <p className="m-0 text-note italic text-ink-soft">Set in Cormorant &amp; Source Serif. Dictated with Wispr&nbsp;Flow.</p>
           <ThemeToggle />
         </div>
         <p className="m-0 max-w-[68ch] text-micro text-ink-soft">
-          Vaada helps people write down what they agreed and isn't a lawyer. Money is held and paid out by Razorpay, never by Vaada.
+          Vaada helps people write down what they agreed, and isn’t a lawyer. Money is held and paid out by Razorpay, never by Vaada.
         </p>
       </div>
     </footer>
@@ -180,7 +180,7 @@ function PersonaSlip({ devTools }: { devTools: boolean }) {
   }
 
   return (
-    <aside className="no-print fixed bottom-3 left-3 z-30 max-w-[calc(100vw-1.5rem)]" aria-label="Dev personas">
+    <aside className="no-print fixed bottom-3 left-3 z-30 hidden max-w-[calc(100vw-1.5rem)] sm:block" aria-label="Dev personas">
       {open ? (
         <div className="sheet w-72 rounded-sm p-3 text-note">
           <p className="label m-0 mb-2">Be someone else</p>
@@ -280,7 +280,7 @@ export function Shell() {
     window.scrollTo(0, 0);
   }, [location.pathname]);
   return (
-    <div className={`flex min-h-dvh flex-col ${config?.persona_switcher ? "pb-14" : ""}`}>
+    <div className={`flex min-h-dvh flex-col ${config?.persona_switcher ? "sm:pb-14" : ""}`}>
       <PageTitle />
       <RouteAnnouncer />
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:bg-paper focus:p-2">
@@ -288,7 +288,7 @@ export function Shell() {
       </a>
       {config?.demo ? <DemoBand /> : null}
       <Masthead />
-      <main id="main" className="grain flex-1">
+      <main id="main" className="grain flex-1 pb-16">
         <Outlet />
       </main>
       <Colophon />

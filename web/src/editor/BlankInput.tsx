@@ -31,6 +31,11 @@ export function blankIds(key: string) {
  * as one document. Focused, it is a real input. A Wispr Flow paste is read at once; hand typing is read after
  * a short pause and shown in the margin, and the blank takes the clean value when you move on.
  */
+/** Wispr ends a dictation with a full stop; set inside the deed's sentence it would double the deed's own punctuation. */
+function withoutClosingStop(raw: string): string {
+  return raw.replace(/[\s.।!?]+$/u, "");
+}
+
 export function BlankInput({ blankKey }: { blankKey: string }) {
   const def = blankDef(blankKey);
   const { state, dispatch, commit } = useEditor();
@@ -143,7 +148,7 @@ export function BlankInput({ blankKey }: { blankKey: string }) {
           ].join(" ")}
         >
           <span key={inked} className={inked ? "ink-in" : undefined}>
-            {empty ? def.placeholder : shown}
+            {empty ? def.placeholder : readable ? shown : withoutClosingStop(shown)}
           </span>
         </span>
         {announcement}

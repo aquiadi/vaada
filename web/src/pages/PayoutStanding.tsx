@@ -4,15 +4,6 @@ import { formatInstantIst } from "../format/dates";
 import type { Payout } from "../lib/types";
 import { requirementText } from "./payoutForm";
 
-const STAMP: Record<Payout["status"], string> = {
-  draft: "Not finished",
-  under_review: "Under review",
-  needs_clarification: "Needs a correction",
-  activated: "Ready",
-  suspended: "Suspended",
-  rejected: "Not accepted",
-};
-
 function Explanation({ payout }: { payout: Payout }) {
   switch (payout.status) {
     case "draft":
@@ -93,7 +84,6 @@ function Entry({ term, children }: { term: string; children: ReactNode }) {
 
 /** What Razorpay last said about the account, and the little Vaada keeps on file. */
 export function PayoutStanding({ payout }: { payout: Payout }) {
-  const ready = payout.status === "activated";
   const onFile = payout.legal_name || payout.bank_last4 || payout.ifsc;
   return (
     <section aria-labelledby="payout-standing" className="sheet grain rounded-sm px-5 py-7 sm:px-10 sm:py-9">
@@ -101,19 +91,14 @@ export function PayoutStanding({ payout }: { payout: Payout }) {
         Status, as Razorpay reports it
       </h2>
       <div role="status" className="mt-3">
-        <p
-          className={`smallcaps m-0 inline-block border-[3px] border-double px-4 py-1.5 font-ui text-note font-semibold tracking-[0.2em] ${ready ? "border-stamp text-stamp" : "border-ink-soft text-ink"}`}
-        >
-          {STAMP[payout.status]}
-        </p>
-        <div className="measure mt-4 text-body text-ink">
+        <div className="measure text-body text-ink">
           <Explanation payout={payout} />
         </div>
       </div>
       {onFile ? (
         <>
           <h3 className="label m-0 mt-8">On file with Vaada</h3>
-          <dl className="m-0 mt-2 max-w-xl">
+          <dl className="m-0 mt-2">
             {payout.legal_name ? <Entry term="Legal name">{payout.legal_name}</Entry> : null}
             {payout.business_type ? (
               <Entry term="Business type">{payout.business_type === "proprietorship" ? "Sole proprietorship" : "Individual"}</Entry>

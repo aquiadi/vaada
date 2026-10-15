@@ -95,8 +95,8 @@ async def deliver(ctx: AppContext, milestone_id: uuid.UUID, actor: User, note: s
                 deal_id=deal.id,
                 milestone_id=milestone.id,
                 kind="delivered",
-                summary=f"Milestone {roman(milestone.idx)} delivered. Disputes close {ist_moment(review_ends)}; "
-                f"the money releases {ist_moment(hold_until)}.",
+                summary=f"Milestone {roman(milestone.idx)} delivered. Review ends {ist_moment(review_ends)}; "
+                f"if no problem is raised, the money releases {ist_moment(hold_until)}.",
                 role=Role.MAKER,
                 actor_id=actor.id,
                 at=now,

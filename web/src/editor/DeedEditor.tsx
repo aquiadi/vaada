@@ -35,7 +35,7 @@ function RemovePart({ i, inline = false }: { i: number; inline?: boolean }) {
       type="button"
       tabIndex={inline ? -1 : undefined}
       onClick={() => dispatch({ type: "removePart", i })}
-      className={inline ? "smallcaps ml-2 cursor-pointer border-0 bg-transparent p-0 align-baseline text-micro text-ink-soft underline decoration-dotted" : FOOT_BUTTON}
+      className={inline ? "no-print smallcaps ml-2 cursor-pointer border-0 bg-transparent p-0 align-baseline text-micro text-ink-soft underline decoration-dotted" : FOOT_BUTTON}
     >
       Remove part {i}
     </button>
@@ -52,7 +52,7 @@ function AddPart({ inline = false }: { inline?: boolean }) {
       onClick={() => dispatch({ type: "addPart" })}
       className={
         inline
-          ? "smallcaps cursor-pointer border border-dashed border-[color-mix(in_srgb,var(--ink)_40%,transparent)] bg-transparent px-3 py-1 text-ui text-ink"
+          ? "no-print smallcaps cursor-pointer border border-dashed border-[color-mix(in_srgb,var(--ink)_40%,transparent)] bg-transparent px-3 py-1 text-ui text-ink"
           : FOOT_BUTTON
       }
     >
@@ -206,7 +206,7 @@ export function DeedEditor({ room, config }: Props) {
     <EditorProvider dealId={room.id} state={state} dispatch={dispatch} normalizeContext={normalizeContext}>
       <title>{`Deed No. ${deedNumber(room.deed_no)} · ${sent ? "Sent" : "New deed"} · Vaada`}</title>
       <div className="mx-auto max-w-[76rem] px-2 py-6 sm:px-6 sm:py-10">
-        <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2 px-2">
+        <div className="no-print mb-4 flex flex-wrap items-baseline justify-between gap-2 px-2">
           <h1 className="label m-0">{sent ? "A deed, sent" : "A new deed"}</h1>
           {sent ? null : (
             <p className="m-0 text-micro text-ink-soft" role="status" aria-live="polite">

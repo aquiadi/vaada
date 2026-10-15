@@ -23,7 +23,11 @@ fi
 for _ in $(seq 1 20); do pg_isready -h 127.0.0.1 -p 54322 >/dev/null 2>&1 && break; sleep 0.5; done
 
 psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" -qc "create schema if not exists auth" >/dev/null
-curl -s -m 1 http://127.0.0.1:54324/api/v1/info >/dev/null || nohup "$N/bin/mailpit" --listen 127.0.0.1:54324 --smtp 127.0.0.1:54325 --smtp-auth-accept-any --smtp-auth-allow-insecure >"$L/mailpit.log" 2>&1 &
+# Each start is an if block: "check || start &" would background the whole list in a subshell that keeps this
+# script's output open for as long as the service runs.
+if ! curl -s -m 1 http://127.0.0.1:54324/api/v1/info >/dev/null; then
+  nohup "$N/bin/mailpit" --listen 127.0.0.1:54324 --smtp 127.0.0.1:54325 --smtp-auth-accept-any --smtp-auth-allow-insecure >"$L/mailpit.log" 2>&1 &
+fi
 if ! curl -s -m 1 http://127.0.0.1:9999/health >/dev/null; then
   (cd "$N/gotrue" && \
   API_EXTERNAL_URL=http://127.0.0.1:54321/auth/v1 GOTRUE_API_HOST=127.0.0.1 PORT=9999 \
@@ -44,16 +48,22 @@ if ! curl -s -m 1 http://127.0.0.1:9999/health >/dev/null; then
   GOTRUE_RATE_LIMIT_EMAIL_SENT=200 GOTRUE_SMTP_MAX_FREQUENCY=1s GOTRUE_LOG_LEVEL=info \
   nohup ./auth >"$L/gotrue.log" 2>&1 &)
 fi
-curl -s -m 1 http://127.0.0.1:54321/auth/v1/health >/dev/null || nohup python3 -I "$REPO/scripts/native-dev/authproxy.py" "$REPO/supabase/templates/otp.html" >"$L/authproxy.log" 2>&1 &
+if ! curl -s -m 1 http://127.0.0.1:54321/auth/v1/health >/dev/null; then
+  nohup python3 -I "$REPO/scripts/native-dev/authproxy.py" "$REPO/supabase/templates/otp.html" >"$L/authproxy.log" 2>&1 &
+fi
 
 if [ -f "$REPO/.dev/api.env" ]; then
   cd "$REPO/api"
   if ! curl -s -m 2 http://127.0.0.1:8000/health >/dev/null; then
     VAADA_ENV_FILE=../.dev/api.env nohup .venv/bin/uvicorn vaada.main:app_factory --factory --host 127.0.0.1 --port 8000 >"$L/api.log" 2>&1 &
   fi
-  pgrep -f "arq vaada[.]jobs" >/dev/null || VAADA_ENV_FILE=../.dev/api.env nohup .venv/bin/arq vaada.jobs.worker.WorkerSettings >"$L/worker.log" 2>&1 &
+  if ! pgrep -f "arq vaada[.]jobs" >/dev/null; then
+    VAADA_ENV_FILE=../.dev/api.env nohup .venv/bin/arq vaada.jobs.worker.WorkerSettings >"$L/worker.log" 2>&1 &
+  fi
   cd "$REPO/web"
-  curl -s -m 2 -o /dev/null http://127.0.0.1:5173/ || (setsid nohup node node_modules/vite/bin/vite.js --port 5173 --strictPort --host 127.0.0.1 >"$L/vite.log" 2>&1 &)
+  if ! curl -s -m 2 -o /dev/null http://127.0.0.1:5173/; then
+    setsid nohup node node_modules/vite/bin/vite.js --port 5173 --strictPort --host 127.0.0.1 >"$L/vite.log" 2>&1 &
+  fi
 fi
 
 for _ in $(seq 1 30); do curl -s -m 2 -o /dev/null http://127.0.0.1:5173/ && curl -s -m 2 http://127.0.0.1:8000/health >/dev/null && break; sleep 1; done

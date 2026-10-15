@@ -106,15 +106,21 @@ function VerifyHash({ agreement, hash }: { agreement: Agreement; hash: string })
 export function RegistryLink({ entry }: { entry: RegistryEntry | undefined }) {
   if (!entry) return null;
   if (entry.status !== "confirmed") return <span className="text-micro italic text-ink-soft">Recording…</span>;
+  // On paper a link or a shortened hash can't be looked up, so the full transaction hash prints instead.
+  const onPaper = <span className="hidden break-all font-mono print:inline"> {entry.tx_hash}</span>;
   if (entry.tx_url)
     return (
-      <a href={entry.tx_url} target="_blank" rel="noreferrer" className="text-micro">
-        On Polygonscan
-      </a>
+      <span className="text-micro">
+        <a href={entry.tx_url} target="_blank" rel="noreferrer" className="print:no-underline">
+          On Polygonscan
+        </a>
+        {onPaper}
+      </span>
     );
   return (
     <span className="text-micro text-ink-soft">
-      Recorded on the local chain <span className="whitespace-nowrap font-mono">{entry.tx_hash?.slice(0, 10)}…</span>
+      Recorded on the local chain <span className="whitespace-nowrap font-mono print:hidden">{entry.tx_hash?.slice(0, 10)}…</span>
+      {onPaper}
     </span>
   );
 }
@@ -133,14 +139,15 @@ interface Props {
 export function PublishedDeed({ agreement, hash, struck, accepted, registry, compact = false, seal }: Props) {
   const published = registry.find((r) => r.kind === "Published");
   return (
-    <DeedSheet deedNo={agreement.deed_no} compact={compact}>
+    // Read, the deed has no margin column, so the sheet narrows to its measure instead of leaving a third of it bare.
+    <DeedSheet deedNo={agreement.deed_no} compact={compact} className={compact ? "" : "mx-auto max-w-[52rem]"}>
       <p className="label m-0 mb-1">In short</p>
       <p className="measure m-0 mb-6 text-body italic text-ink-soft">{agreementSummary(agreement)}</p>
       <hr className="rule-double mb-6" />
       <DeedBody s={agreementSlots(agreement, struck)} facts={factsFromAgreement(agreement)} />
       <hr className="rule-double my-6" />
       <div className="grid gap-6 md:grid-cols-[minmax(0,1fr)_auto]">
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {accepted ? (
             <p className="m-0 text-body text-ink">
               Accepted by {accepted.name} ({accepted.email_masked}) on {formatInstantIst(accepted.at)}.
@@ -149,16 +156,16 @@ export function PublishedDeed({ agreement, hash, struck, accepted, registry, com
             <p className="m-0 text-body italic text-ink-soft">Not yet accepted.</p>
           )}
           <DeedDisclaimers />
-          <dl className="m-0 space-y-1 text-micro text-ink-soft">
+          <dl className="m-0 flex flex-col gap-2 text-micro text-ink-soft">
             <div>
-              <dt className="label inline">Agreement hash </dt>
-              <dd className="m-0 inline">
+              <dt className="label">Agreement hash</dt>
+              <dd className="m-0">
                 <Mono className="text-ink">{hash}</Mono>
               </dd>
             </div>
             <div>
-              <dt className="label inline">Nonce </dt>
-              <dd className="m-0 inline">
+              <dt className="label">Nonce</dt>
+              <dd className="m-0">
                 <Mono className="text-ink">{agreement.nonce}</Mono>
               </dd>
             </div>

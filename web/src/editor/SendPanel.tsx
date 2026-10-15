@@ -32,7 +32,7 @@ export function SentPanel({ room }: { room: Room }) {
   const link = deedLink(room.slug);
   const [copied, setCopied] = useState(false);
   return (
-    <section aria-labelledby="sent-heading" className="mt-8 border-t-2 border-double border-gold pt-6">
+    <section aria-labelledby="sent-heading" className="no-print mt-8 border-t-[3px] border-double border-gold pt-6">
       <h2 id="sent-heading" ref={focusOnMount} tabIndex={-1} className="font-display text-h3 text-ink focus:outline-none">
         Sent to {room.client.email_masked ?? "your client"}.
       </h2>
@@ -107,7 +107,7 @@ export function SendPanel({ dealId, saveFirst, onProblems, onSent, ready }: Prop
     } catch (caught) {
       if (caught instanceof ApiError && caught.problems.length) {
         onProblems(Object.fromEntries(caught.problems.map((p) => [p.blank, p.message])));
-        setError(`${caught.message} They're marked in the margin.`);
+        setError(`${caught.message} They’re marked with a red rule beside their lines.`);
       } else if (caught instanceof DraftNotSaved) {
         setError("Your latest changes haven't saved, so nothing was sent. Check your connection and try again.");
       } else {
@@ -119,7 +119,7 @@ export function SendPanel({ dealId, saveFirst, onProblems, onSent, ready }: Prop
   }
 
   return (
-    <section aria-labelledby="send-heading" className="mt-8 border-t-2 border-double border-gold pt-6">
+    <section aria-labelledby="send-heading" className="no-print mt-8 border-t-[3px] border-double border-gold pt-6">
       <h2 id="send-heading" className="font-display text-h3 text-ink">
         Send to client
       </h2>
@@ -145,7 +145,7 @@ export function SendPanel({ dealId, saveFirst, onProblems, onSent, ready }: Prop
           Send the deed
         </Button>
       </div>
-      {!ready ? <p className="mt-3 text-note italic text-ink-soft">Blanks still to fill are noted in the margin.</p> : null}
+      {!ready ? <p className="mt-3 text-note italic text-ink-soft">Blanks still to fill are marked with a red rule beside their lines; the deed can’t go out until they’re filled.</p> : null}
       {error ? (
         <Notice tone="error" className="mt-3">
           {error}

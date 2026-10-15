@@ -1,4 +1,4 @@
-"""The freelancer's books: amanat (held in trust) and jama (received), entry by entry, with running totals."""
+"""The freelancer's books: amanat (held in trust) and jama (released to them), entry by entry, with running totals."""
 
 import csv
 import io
@@ -106,7 +106,7 @@ def as_csv(rows: list[dict[str, Any]]) -> str:
             "Milestone",
             "Particulars",
             "Held (INR)",
-            "Received (INR)",
+            "Released to you (INR)",
             "Razorpay reference",
         ]
     )

@@ -317,6 +317,23 @@
     .sheet {
       box-shadow: none;
     }
+    @page {
+      margin: 16mm;
+    }
+    h2,
+    h3 {
+      break-after: avoid;
+    }
+    li,
+    tr,
+    figure,
+    .keep-together {
+      break-inside: avoid;
+    }
+    /* A ledger's closing balance prints once, under the last entry, not under every page. */
+    tfoot {
+      display: table-row-group;
+    }
     /* The pen strokes are measured from the screen's line boxes and would not follow the text as it reflows. */
     .strike-strokes {
       display: none;

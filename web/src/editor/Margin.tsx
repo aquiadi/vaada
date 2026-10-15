@@ -156,16 +156,16 @@ function Note({ blankKey }: { blankKey: string }) {
         </p>
       ) : null}
       {failed ? (
-        <p id={ids.note} className="m-0 text-bahi">
+        <p id={ids.note} className="m-0 text-ink">
           {blank.note}
         </p>
       ) : null}
       {problem && !failed ? (
-        <p id={ids.note} className="m-0 text-bahi">
+        <p id={ids.note} className="m-0 text-ink">
           {problem}
         </p>
       ) : null}
-      {sum ? <p className="m-0 text-bahi">{sum}</p> : null}
+      {sum ? <p className="m-0 text-ink">{sum}</p> : null}
       {toFill ? <p className="m-0 italic text-ink-soft">To fill in</p> : null}
     </div>
   );
@@ -191,7 +191,7 @@ export function StrikeToggle({ clause, inMargin = false }: { clause: StrikableKe
       tabIndex={inMargin ? -1 : undefined}
       onClick={() => dispatch({ type: struck ? "restore" : "strike", key: clause })}
       aria-pressed={struck}
-      className="smallcaps mb-2 cursor-pointer border-0 bg-transparent p-0 text-micro text-ink-soft underline decoration-dotted underline-offset-2 hover:text-ink"
+      className="no-print smallcaps mb-2 cursor-pointer border-0 bg-transparent p-0 text-micro text-ink-soft underline decoration-dotted underline-offset-2 hover:text-ink"
     >
       {struck ? `Restore ${CLAUSE_LABEL[clause]}` : `Strike ${CLAUSE_LABEL[clause]}`}
     </button>

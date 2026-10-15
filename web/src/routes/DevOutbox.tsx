@@ -33,7 +33,7 @@ function Letter({ email, number }: { email: OutboxEmail; number: number }) {
             </span>
             <span className="mt-0.5 block text-note text-ink-soft">
               To <span className="break-all text-ink">{email.to}</span> · {formatInstantIst(email.created_at)} ·{" "}
-              <Mono>{email.template}</Mono> · {email.status}
+              <Mono>{email.template}</Mono> · {email.status === "sent" ? "kept here" : email.status === "queued" ? "waiting" : email.status}
             </span>
           </span>
         </summary>
@@ -83,7 +83,7 @@ export default function DevOutbox() {
         <PageHeader
           kicker="Outbox · development and demo"
           title="Dispatch register"
-          lede="Every letter Vaada would have sent, newest first. None of them left this machine."
+          lede="Every letter Vaada would have sent, newest first. In development and the demo, letters are kept here instead of being emailed."
         />
         <Button tone="plain" className="no-print mb-8 self-start sm:self-auto" busy={query.isFetching} onClick={() => void query.refetch()}>
           Look again
